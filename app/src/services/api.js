@@ -33,7 +33,9 @@ const api = {
             Categoria: transaction.category,
             Monto: transaction.amount,
             Cuenta: transaction.account,
-            Descripcion: transaction.description
+            Descripcion: transaction.description,
+            MesAfectacion: transaction.MesAfectacion, // [NEW]
+            Estado: transaction.Estado // [NEW] Optional status override
         };
         try {
             const response = await axios.post(API_URL, JSON.stringify({
@@ -47,6 +49,49 @@ const api = {
             return response.data;
         } catch (error) {
             console.error("Error al agregar transacción:", error);
+            throw error;
+        }
+    },
+
+    // Actualizar una transacción [NEW]
+    updateTransaction: async (transaction) => {
+        const payload = {
+            ID: transaction.id,
+            Fecha: transaction.date,
+            Tipo: transaction.type,
+            Categoria: transaction.category,
+            Monto: transaction.amount,
+            Cuenta: transaction.account,
+            Descripcion: transaction.description,
+            MesAfectacion: transaction.MesAfectacion, // [NEW]
+            Estado: transaction.Estado
+        };
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'updateTransaction',
+                payload: payload
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al actualizar transacción:", error);
+            throw error;
+        }
+    },
+
+    // Eliminar transacción [NEW]
+    deleteTransaction: async (id) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'deleteTransaction',
+                payload: { ID: id }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al eliminar transacción:", error);
             throw error;
         }
     },

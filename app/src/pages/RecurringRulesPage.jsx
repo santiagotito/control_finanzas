@@ -350,6 +350,21 @@ const RecurringRulesPage = () => {
                                     <div className="text-sm text-gray-500 flex flex-col">
                                         <span className="font-medium text-indigo-600 text-xs">{rule.Cuenta}</span>
                                         <span>{rule.Frecuencia} • Día {rule.DiaEjecucion}</span>
+                                        {rule.FechaFin && rule.FechaInicio && (
+                                            <span className="text-xs font-semibold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded w-fit my-1">
+                                                Cuota {(() => {
+                                                    const start = new Date(rule.FechaInicio);
+                                                    const now = new Date();
+                                                    // Diferencia en meses
+                                                    const diffMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1;
+
+                                                    const end = new Date(rule.FechaFin);
+                                                    const totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+
+                                                    return `${Math.max(1, diffMonths)} / ${Math.max(1, totalMonths)}`;
+                                                })()}
+                                            </span>
+                                        )}
                                         <span className="text-xs text-gray-400">
                                             {rule.FechaFin ? `Hasta ${rule.FechaFin.split('T')[0]}` : 'Indefinido'}
                                         </span>

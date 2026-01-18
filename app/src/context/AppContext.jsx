@@ -13,19 +13,22 @@ export const AppProvider = ({ children }) => {
     const [error, setError] = useState(null);
 
     // Cargar datos al iniciar
-    const loadData = async () => {
-        setLoading(true);
+    const loadData = async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
         try {
             const result = await api.getData();
             if (result && result.status === 'success') {
                 const { data } = result;
+
+                // Guardar en caché para próxima vez
+                localStorage.setItem('finance_app_cache', JSON.stringify(data));
+
                 setTransactions(data.transactions || []);
                 setAccounts(data.accounts || []);
                 setGoals(data.goals || []);
                 setRecurringRules(data.recurring || []);
                 setSettings(data.settings || []);
             } else if (result === null) {
-                // URL no configurada
                 setError("API_URL_MISSING");
             }
         } catch (err) {
@@ -36,7 +39,25 @@ export const AppProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        loadData();
+        // Optimistic Load from Cache
+        const cached = localStorage.getItem('finance_app_cache');
+        if (cached) {
+            try {
+                const data = JSON.parse(cached);
+                setTransactions(data.transactions || []);
+                setAccounts(data.accounts || []);
+                setGoals(data.goals || []);
+                setRecurringRules(data.recurring || []);
+                setSettings(data.settings || []);
+                setLoading(false); // Mostrar datos cacheados inmediatamente
+                loadData(true); // Recargar en segundo plano
+            } catch (e) {
+                console.error("Cache parsing error", e);
+                loadData(false);
+            }
+        } else {
+            loadData(false);
+        }
     }, []);
 
     // Acciones
@@ -44,6 +65,26 @@ export const AppProvider = ({ children }) => {
         const result = await api.addTransaction(tx);
         if (result.status === 'success') {
             await loadData();
+            return true;
+        }
+        return false;
+    };
+
+    const updateTransaction = async (tx) => {
+        const result = await api.updateTransaction(tx);
+        if (result.status === 'success') {
+            await loadData(true); // Background update
+            return true;
+        }
+        return false;
+    };
+
+    const deleteTransaction = async (id) => {
+        const result = await api.deleteTransaction(id);
+        if (result.status === 'success') {
+            const currentTx = transactions.filter(t => t.ID !== id);
+            setTransactions(currentTx); // Optimistic UI
+            await loadData(true);
             return true;
         }
         return false;
@@ -133,13 +174,14 @@ export const AppProvider = ({ children }) => {
             settings,
             loading,
             error,
-            refreshData: loadData,
+            refreshData: () => loadData(true), // Al refrescar manual (post-acción), usamos background para no bloquear UI (o false si queremos bloquear) -> Mejor true para UX fluida, el loading de UI local se encarga.
             addTransaction,
+            updateTransaction,
+            deleteTransaction,
             addAccount,
             deleteAccount,
             addGoal,
             recurringRules,
-            addRecurringRule,
             addRecurringRule,
             updateRecurringRule,
             deleteRecurringRule,

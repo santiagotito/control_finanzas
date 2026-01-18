@@ -26,9 +26,9 @@ function onOpen() {
 function setupSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // 1. Transacciones (Ahora con Estado)
+  // 1. Transacciones (Ahora con Estado y MesAfectacion)
   ensureSheet(ss, SHEET_NAMES.TRANSACTIONS, [
-    'ID', 'Fecha', 'Tipo', 'Categoria', 'Monto', 'Cuenta', 'Descripcion', 'FechaCreacion', 'FechaPagoReal', 'Estado'
+    'ID', 'Fecha', 'MesAfectacion', 'Tipo', 'Categoria', 'Monto', 'Cuenta', 'Descripcion', 'FechaCreacion', 'FechaPagoReal', 'Estado'
   ]);
 
   // 2. Cuentas
@@ -57,6 +57,30 @@ function setupSheets() {
       ['Gasto', 'Vivienda'], ['Ingreso', 'Salario']
     ]);
   }
+  // REPARACIÓN DE FORMATOS (Fix para 1900 y 2026)
+  fixColumnFormats(ss);
+}
+
+function fixColumnFormats(ss) {
+    const sheet = ss.getSheetByName(SHEET_NAMES.TRANSACTIONS);
+    if(sheet) {
+        const headers = getSheetHeaderMap(sheet);
+        const lastRow = sheet.getLastRow();
+        if(lastRow > 1) {
+            // Monto -> Moneda/Numero
+            if(headers['Monto']) {
+                sheet.getRange(2, headers['Monto'], lastRow - 1, 1).setNumberFormat("#,##0.00");
+            }
+            // Fecha -> Texto/Fecha (YYYY-MM-DD para compatibilidad)
+            if(headers['Fecha']) {
+                sheet.getRange(2, headers['Fecha'], lastRow - 1, 1).setNumberFormat("@"); // Texto plano valida mejor YYYY-MM-DD
+            }
+             // FechaPagoReal -> Texto/Fecha
+            if(headers['FechaPagoReal']) {
+                sheet.getRange(2, headers['FechaPagoReal'], lastRow - 1, 1).setNumberFormat("@");
+            }
+        }
+    }
 }
 
 function ensureSheet(ss, name, coreHeaders) {
@@ -97,7 +121,8 @@ function doPost(e) {
 
     // Transacciones
     if (action === 'addTransaction') return handleAddTransaction(payload);
-    if (action === 'updateTransaction') return updateRow(SHEET_NAMES.TRANSACTIONS, payload.ID, payload); // [NEW]
+    if (action === 'updateTransaction') return updateRow(SHEET_NAMES.TRANSACTIONS, payload.ID, payload);
+    if (action === 'deleteTransaction') return deleteRow(SHEET_NAMES.TRANSACTIONS, payload.ID); // [NEW]
     
     // Cuentas
     if (action === 'addAccount') return handleAddAccount(payload);
