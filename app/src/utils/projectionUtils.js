@@ -3,24 +3,38 @@
  * Calcula info de cuotas (Ej: 1/12)
  */
 export const getInstallmentInfo = (rule, dateStr) => {
-    if (!rule.FechaFin) return null; // Indefinido
+    if (!rule.FechaFin || !rule.FechaInicio) return null;
 
-    const start = new Date(rule.FechaInicio);
-    const end = new Date(rule.FechaFin);
-    const current = new Date(dateStr);
+    const getYM = (input) => {
+        if (!input) return null;
+        let d;
+        if (typeof input === 'string') {
+            // "YYYY-MM-DD" o similar
+            const parts = input.split('T')[0].split('-');
+            if (parts.length < 2) return null;
+            return { y: parseInt(parts[0]), m: parseInt(parts[1]) - 1 };
+        } else if (input instanceof Date) {
+            d = input;
+        } else {
+            return null;
+        }
+        // Si es un objeto Date (ej: desde el backend), usar UTC para evitar desfases locales
+        return { y: d.getUTCFullYear(), m: d.getUTCMonth() };
+    };
 
-    // Ajuste zonas horarias: trabajar con Años/Meses
-    const startM = start.getFullYear() * 12 + start.getMonth();
-    const endM = end.getFullYear() * 12 + end.getMonth();
-    const curM = current.getFullYear() * 12 + current.getMonth();
+    const start = getYM(rule.FechaInicio);
+    const end = getYM(rule.FechaFin);
+    const current = getYM(dateStr);
 
-    if (curM < startM) return null;
-    if (curM > endM) return null;
+    if (!start || !end || !current) return null;
 
-    const currentInstallment = curM - startM + 1;
-    const totalInstallments = endM - startM + 1;
+    const startTotalMonths = start.y * 12 + start.m;
+    const endTotalMonths = end.y * 12 + end.m;
+    const currentTotalMonths = current.y * 12 + current.m;
 
-    return `${currentInstallment}/${totalInstallments}`;
+    if (currentTotalMonths < startTotalMonths || currentTotalMonths > endTotalMonths) return null;
+
+    return `${currentTotalMonths - startTotalMonths + 1}/${endTotalMonths - startTotalMonths + 1}`;
 };
 
 /**

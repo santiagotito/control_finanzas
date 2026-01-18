@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatCurrency } from '../utils/financialUtils';
+import { getInstallmentInfo } from '../utils/projectionUtils';
 import { RefreshCw, Plus, Save, Trash2, Calendar, Loader2, Edit } from 'lucide-react';
 
 const RecurringRulesPage = () => {
@@ -61,18 +62,19 @@ const RecurringRulesPage = () => {
 
     const handleEdit = (rule) => {
         setFormData({
-            name: rule.Nombre,
-            type: rule.Tipo,
-            amount: rule.Monto,
-            category: rule.Categoria,
-            account: rule.Cuenta,
-            frequency: rule.Frecuencia,
-            executionDay: rule.DiaEjecucion,
-            startDate: rule.FechaInicio ? rule.FechaInicio.split('T')[0] : '',
-            endDate: rule.FechaFin ? rule.FechaFin.split('T')[0] : ''
+            name: rule.Nombre || '',
+            type: rule.Tipo || 'Gasto',
+            amount: rule.Monto || '',
+            category: rule.Categoria || '',
+            account: rule.Cuenta || '',
+            frequency: rule.Frecuencia || 'Mensual',
+            executionDay: rule.DiaEjecucion || '',
+            startDate: rule.FechaInicio ? (typeof rule.FechaInicio === 'string' ? rule.FechaInicio.split('T')[0] : new Date(rule.FechaInicio).toISOString().split('T')[0]) : '',
+            endDate: rule.FechaFin ? (typeof rule.FechaFin === 'string' ? rule.FechaFin.split('T')[0] : new Date(rule.FechaFin).toISOString().split('T')[0]) : ''
         });
         setEditingId(rule.ID);
         setShowForm(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const resetForm = () => {
@@ -351,18 +353,8 @@ const RecurringRulesPage = () => {
                                         <span className="font-medium text-indigo-600 text-xs">{rule.Cuenta}</span>
                                         <span>{rule.Frecuencia} • Día {rule.DiaEjecucion}</span>
                                         {rule.FechaFin && rule.FechaInicio && (
-                                            <span className="text-xs font-semibold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded w-fit my-1">
-                                                Cuota {(() => {
-                                                    const start = new Date(rule.FechaInicio);
-                                                    const now = new Date();
-                                                    // Diferencia en meses
-                                                    const diffMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1;
-
-                                                    const end = new Date(rule.FechaFin);
-                                                    const totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-
-                                                    return `${Math.max(1, diffMonths)} / ${Math.max(1, totalMonths)}`;
-                                                })()}
+                                            <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full w-fit my-1 border border-indigo-100">
+                                                Cuota {getInstallmentInfo(rule, new Date().toISOString().split('T')[0]) || 'Regla Activa'}
                                             </span>
                                         )}
                                         <span className="text-xs text-gray-400">
@@ -377,14 +369,14 @@ const RecurringRulesPage = () => {
                                 </p>
                                 <button
                                     onClick={() => handleEdit(rule)}
-                                    className="mt-2 p-2 text-gray-300 hover:text-indigo-500 transition-colors opacity-0 group-hover:opacity-100 mr-1"
+                                    className="mt-2 p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all mr-1"
                                     title="Editar regla"
                                 >
                                     <Edit size={16} />
                                 </button>
                                 <button
                                     onClick={() => handleDelete(rule.ID)}
-                                    className="mt-2 p-2 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                    className="mt-2 p-2 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                     title="Eliminar regla"
                                 >
                                     <Trash2 size={16} />

@@ -121,8 +121,8 @@ function doPost(e) {
 
     // Transacciones
     if (action === 'addTransaction') return handleAddTransaction(payload);
-    if (action === 'updateTransaction') return updateRow(SHEET_NAMES.TRANSACTIONS, payload.ID, payload);
-    if (action === 'deleteTransaction') return deleteRow(SHEET_NAMES.TRANSACTIONS, payload.ID); // [NEW]
+    if (action === 'updateTransaction') return handleUpdateTransaction(payload);
+    if (action === 'deleteTransaction') return handleDeleteTransaction(payload);
     
     // Cuentas
     if (action === 'addAccount') return handleAddAccount(payload);
@@ -159,7 +159,7 @@ function handleAddTransaction(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const accountsData = readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.ACCOUNTS));
   const acc = accountsData.find(a => a['Nombre'] === data['Cuenta']);
-  
+
   if (acc && acc['Tipo'] === 'Tarjeta de Crédito') {
      // Si es Gasto en TC -> Pendiente (hasta corte/pago). Si es Ingreso (pago a la TC o reversión) -> Validado.
      // Asumimos que si registras un pago a la tarjeta, ya lo hiciste.
@@ -168,23 +168,69 @@ function handleAddTransaction(data) {
         status = 'Pendiente';
      }
   }
-  
+
   // Si nos mandan un estado explicito (ej. al confirmar recurrente), lo respetamos
   if (data['Estado']) status = data['Estado'];
 
   data['FechaPagoReal'] = realDate;
   data['FechaCreacion'] = new Date().toISOString();
   data['Estado'] = status;
-  
+
   // 2. Guardar
   const response = createRow(SHEET_NAMES.TRANSACTIONS, data);
-  
-  // 3. Side Effect: Actualizar Saldo (Solo si está validado?)
-  // NOTA: Usualmente el saldo contable se afecta inmediato, o diferido?
-  // Para simplicidad, afectamos "SaldoActual" siempre, pues es deuda adquirida.
-  updateAccountBalance(data['Cuenta'], data['Monto'], data['Tipo']);
-  
+
+  // 3. Side Effect: Actualizar Saldo SOLO si está Validado (saldo real)
+  // Las transacciones Pendientes no afectan el saldo real de la cuenta
+  if (status === 'Validado') {
+    updateAccountBalance(data['Cuenta'], data['Monto'], data['Tipo']);
+  }
+
   return response;
+}
+
+function handleUpdateTransaction(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.TRANSACTIONS);
+  const rows = readSheetAsJSON(sheet);
+  const oldTx = rows.find(r => r['ID'] === payload.ID);
+
+  if (!oldTx) return responseJSON({status:'error', message:'Transacción no encontrada'});
+
+  const oldStatus = oldTx['Estado'];
+  const newStatus = payload['Estado'] || oldStatus;
+  const account = payload['Cuenta'] || oldTx['Cuenta'];
+  const amount = parseFloat(payload['Monto'] || oldTx['Monto']);
+  const type = payload['Tipo'] || oldTx['Tipo'];
+
+  // Si cambia de Pendiente a Validado, actualizar saldo
+  if (oldStatus === 'Pendiente' && newStatus === 'Validado') {
+    updateAccountBalance(account, amount, type);
+  }
+  // Si cambia de Validado a Pendiente, revertir saldo
+  else if (oldStatus === 'Validado' && newStatus === 'Pendiente') {
+    // Revertir: si era Gasto, sumar; si era Ingreso, restar
+    const reverseType = type === 'Gasto' ? 'Ingreso' : 'Gasto';
+    updateAccountBalance(account, amount, reverseType);
+  }
+
+  return updateRow(SHEET_NAMES.TRANSACTIONS, payload.ID, payload);
+}
+
+function handleDeleteTransaction(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.TRANSACTIONS);
+  const rows = readSheetAsJSON(sheet);
+  const tx = rows.find(r => r['ID'] === payload.ID);
+
+  if (!tx) return responseJSON({status:'error', message:'Transacción no encontrada'});
+
+  // Solo revertir saldo si la transacción estaba Validada
+  if (tx['Estado'] === 'Validado') {
+    const reverseType = tx['Tipo'] === 'Gasto' ? 'Ingreso' : 'Gasto';
+    updateAccountBalance(tx['Cuenta'], tx['Monto'], reverseType);
+  }
+
+  return deleteRow(SHEET_NAMES.TRANSACTIONS, payload.ID);
 }
 
 function handleAddAccount(data) {
@@ -322,14 +368,40 @@ function readSheetAsJSON(sheet) {
 
 function getData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const transactions = readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.TRANSACTIONS));
+  const accounts = readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.ACCOUNTS));
+
+  // Calcular saldo real de cada cuenta basado en transacciones Validadas
+  const accountsWithRealBalance = accounts.map(acc => {
+    let saldoReal = 0;
+    const accName = String(acc['Nombre'] || '').trim().toUpperCase();
+
+    transactions.forEach(tx => {
+      const txAcc = String(tx['Cuenta'] || '').trim().toUpperCase();
+      if (txAcc === accName && tx['Estado'] === 'Validado') {
+        const amount = parseFloat(tx['Monto'] || 0);
+        if (tx['Tipo'] === 'Ingreso') {
+          saldoReal += amount;
+        } else if (tx['Tipo'] === 'Gasto') {
+          saldoReal -= amount;
+        }
+      }
+    });
+
+    return {
+      ...acc,
+      SaldoActual: saldoReal // Sobrescribir con el saldo calculado en tiempo real
+    };
+  });
+
   return responseJSON({
     status: 'success',
     data: {
-      transactions: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.TRANSACTIONS)),
-      accounts: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.ACCOUNTS)),
+      transactions: transactions,
+      accounts: accountsWithRealBalance,
       goals: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.GOALS)),
       settings: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.SETTINGS)),
-      recurring: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.RECURRING)) // [NEW]
+      recurring: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.RECURRING))
     }
   });
 }
@@ -380,4 +452,39 @@ function calculateRealPaymentDate(dateStr, cutoff, payment) {
 
 function responseJSON(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Recalcula los saldos de todas las cuentas basándose SOLO en transacciones Validadas.
+ * Útil para corregir saldos que se desincronizaron.
+ */
+function recalcBalances() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const accountsSheet = ss.getSheetByName(SHEET_NAMES.ACCOUNTS);
+  const txSheet = ss.getSheetByName(SHEET_NAMES.TRANSACTIONS);
+
+  const accounts = readSheetAsJSON(accountsSheet);
+  const transactions = readSheetAsJSON(txSheet);
+
+  accounts.forEach(acc => {
+    // Empezar desde el saldo inicial
+    let balance = parseFloat(acc['SaldoInicial'] || 0);
+
+    // Sumar/restar SOLO transacciones Validadas de esta cuenta
+    transactions.forEach(tx => {
+      if (tx['Cuenta'] === acc['Nombre'] && tx['Estado'] === 'Validado') {
+        const amount = parseFloat(tx['Monto'] || 0);
+        if (tx['Tipo'] === 'Gasto') {
+          balance -= amount;
+        } else {
+          balance += amount;
+        }
+      }
+    });
+
+    // Actualizar el saldo en la hoja
+    updateRow(SHEET_NAMES.ACCOUNTS, acc['ID'], { 'SaldoActual': balance });
+  });
+
+  SpreadsheetApp.getUi().alert('Saldos recalculados correctamente (solo transacciones Validadas).');
 }

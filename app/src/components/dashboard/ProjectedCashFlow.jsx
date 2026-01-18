@@ -69,6 +69,8 @@ const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, s
         return result;
     }, [transactions, recurringRules, monthsToProject]);
 
+    const totalBalance = useMemo(() => data.reduce((sum, item) => sum + item.Balance, 0), [data]);
+
     if (data.length === 0) {
         return <div className="h-64 flex items-center justify-center text-gray-400">Sin proyecciones configuradas</div>;
     }
@@ -80,22 +82,30 @@ const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, s
                     <h3 className="font-bold text-gray-800">Flujo de Caja Proyectado</h3>
                     <p className="text-xs text-gray-500">Neto Mensual (Ingresos - Gastos)</p>
                 </div>
-                <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium">
-                    {[6, 12, 24].map(m => (
-                        <button
-                            key={m}
-                            onClick={() => setMonthsToProject(m)}
-                            className={`px-3 py-1 rounded-md transition-all ${monthsToProject === m ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            {m} Meses
-                        </button>
-                    ))}
+                <div className="flex flex-col items-end gap-2">
+                    <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium">
+                        {[6, 12, 24].map(m => (
+                            <button
+                                key={m}
+                                onClick={() => setMonthsToProject(m)}
+                                className={`px-3 py-1 rounded-md transition-all ${monthsToProject === m ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                {m} Meses
+                            </button>
+                        ))}
+                    </div>
+                    <div className="bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
+                        <span className="text-[10px] text-blue-600 font-bold block leading-none">TOTAL PROYECTADO</span>
+                        <span className={`text-sm font-bold ${totalBalance < 0 ? 'text-red-600' : 'text-blue-700'}`}>
+                            {formatCurrency(totalBalance)}
+                        </span>
+                    </div>
                 </div>
             </div>
 
             <div className="w-full h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <ComposedChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
@@ -104,7 +114,7 @@ const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, s
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                        <YAxis hide />
+                        <YAxis hide domain={['auto', 'auto']} />
                         <Tooltip
                             formatter={(value) => formatCurrency(value)}
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
@@ -122,7 +132,38 @@ const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, s
                             strokeWidth={3}
                             dot={{ r: 3, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
                             activeDot={{ r: 5 }}
-                        />
+                        >
+                            <LabelList
+                                dataKey="Balance"
+                                position="top"
+                                content={(props) => {
+                                    const { x, y, value } = props;
+                                    if (value === 0) return null;
+                                    return (
+                                        <g>
+                                            <rect
+                                                x={x - 22}
+                                                y={y - 22}
+                                                width={44}
+                                                height={14}
+                                                rx={7}
+                                                fill={value < 0 ? '#f59e0b' : '#3b82f6'}
+                                            />
+                                            <text
+                                                x={x}
+                                                y={y - 14}
+                                                fill="#fff"
+                                                textAnchor="middle"
+                                                dominantBaseline="middle"
+                                                style={{ fontSize: '9px', fontWeight: 'bold' }}
+                                            >
+                                                {Math.abs(value) > 1000 ? `${(value / 1000).toFixed(0)}k` : value.toFixed(0)}
+                                            </text>
+                                        </g>
+                                    );
+                                }}
+                            />
+                        </Line>
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>

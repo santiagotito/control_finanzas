@@ -244,7 +244,8 @@ const TransactionsPage = () => {
                 amount: proj.Monto,
                 account: proj.Cuenta,
                 description: proj.Descripcion,
-                Estado: 'Validado' // CAMBIO: De Proyectado pasa directo a Validado
+                MesAfectacion: proj.Fecha.slice(0, 7),
+                Estado: 'Validado'
             });
             if (success) await refreshData();
         } catch (e) {
