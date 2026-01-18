@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, HandCoins, CreditCard, PiggyBank, TrendingUp, Settings, Menu, X, Bell, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, HandCoins, CreditCard, PiggyBank, TrendingUp, Menu, X, Bell, RefreshCw } from 'lucide-react';
 
 const MainLayout = ({ children }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -13,7 +13,7 @@ const MainLayout = ({ children }) => {
         { name: 'Metas', path: '/goals', icon: PiggyBank },
         { name: 'Deudas y Pagos', path: '/recurring', icon: RefreshCw },
         { name: 'Análisis', path: '/analysis', icon: TrendingUp },
-        { name: 'Alertas', path: '/settings', icon: Bell }, // Temporalmente en settings o página propia?
+        { name: 'Alertas', path: '/alerts', icon: Bell },
         // Mejor creo una página separada si es importante.
         // El usuario pidió "Alertas de Pago". 
         // Voy a usar Settings para alertas y config general para no saturar el menú.
@@ -23,7 +23,6 @@ const MainLayout = ({ children }) => {
         // Pero para cumplir "Clean UI", mejor tenerlo visible si es importante.
         // Dejaré 'Configuración' que sirve para todo. 
         // Y añadiré un badge de notificación si hay alertas.
-        { name: 'Configuración', path: '/settings', icon: Settings },
     ];
 
     const closeMenu = () => setIsMobileMenuOpen(false);

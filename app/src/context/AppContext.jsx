@@ -126,6 +126,33 @@ export const AppProvider = ({ children }) => {
         return false;
     };
 
+    const updateGoal = async (id, amount) => {
+        const result = await api.updateGoal(id, amount);
+        if (result.status === 'success') {
+            await loadData();
+            return true;
+        }
+        return false;
+    };
+
+    const updateGoalFull = async (goal) => {
+        const result = await api.updateGoalFull(goal);
+        if (result.status === 'success') {
+            await loadData();
+            return true;
+        }
+        return false;
+    };
+
+    const deleteGoal = async (id) => {
+        const result = await api.deleteGoal(id);
+        if (result.status === 'success') {
+            await loadData();
+            return true;
+        }
+        return false;
+    };
+
     const addRecurringRule = async (rule) => {
         const result = await api.addRecurringRule(rule);
         if (result.status === 'success') {
@@ -181,6 +208,9 @@ export const AppProvider = ({ children }) => {
             addAccount,
             deleteAccount,
             addGoal,
+            updateGoal,
+            updateGoalFull,
+            deleteGoal,
             recurringRules,
             addRecurringRule,
             updateRecurringRule,

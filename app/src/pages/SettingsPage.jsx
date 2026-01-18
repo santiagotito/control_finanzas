@@ -73,17 +73,14 @@ const ConfigInfo = () => {
 }
 
 const SettingsPage = () => {
-    const { accounts } = useAppContext();
-
     return (
         <div className="space-y-6">
             <header>
-                <h2 className="text-2xl font-bold text-gray-800">Configuración y Alertas</h2>
-                <p className="text-gray-500">Administra tus preferencias y recordatorios</p>
+                <h2 className="text-2xl font-bold text-gray-800">Cuentas y Filtros</h2>
+                <p className="text-gray-500">Configuración global del sistema</p>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <PaymentAlerts accounts={accounts} />
                 <ConfigInfo />
             </div>
         </div>

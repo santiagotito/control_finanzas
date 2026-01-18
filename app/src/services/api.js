@@ -186,11 +186,11 @@ const api = {
         }
     },
 
-    // Actualizar una meta
-    updateGoal: async (goal) => {
+    // Actualizar una meta (para añadir ahorro)
+    updateGoal: async (id, amount) => {
         const payload = {
-            ID: goal.id,
-            amount: goal.amount // Special logic in backend for accumulation
+            ID: id,
+            amount: amount
         };
         try {
             const response = await axios.post(API_URL, JSON.stringify({
@@ -202,6 +202,45 @@ const api = {
             return response.data;
         } catch (error) {
             console.error("Error al actualizar meta:", error);
+            throw error;
+        }
+    },
+
+    // Actualizar meta completa (metadatos)
+    updateGoalFull: async (goal) => {
+        const payload = {
+            ID: goal.id,
+            Nombre: goal.name,
+            MontoObjetivo: goal.targetAmount,
+            FechaLimite: goal.deadline,
+            Color: goal.color
+        };
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'updateGoal',
+                payload: payload
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al editar meta:", error);
+            throw error;
+        }
+    },
+
+    // Eliminar meta
+    deleteGoal: async (id) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'deleteGoal',
+                payload: { ID: id }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al eliminar meta:", error);
             throw error;
         }
     },

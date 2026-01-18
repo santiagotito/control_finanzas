@@ -132,6 +132,7 @@ function doPost(e) {
     // Metas
     if (action === 'addGoal') return createRow(SHEET_NAMES.GOALS, payload);
     if (action === 'updateGoal') return handleUpdateGoal(payload);
+    if (action === 'deleteGoal') return deleteRow(SHEET_NAMES.GOALS, payload.ID);
     
     // Recurrentes [NEW]
     if (action === 'addRecurringRule') return createRow(SHEET_NAMES.RECURRING, payload);
@@ -267,11 +268,18 @@ function handleUpdateGoal(data) {
     
     if (!goal) return responseJSON({status:'error', message:'Meta no encontrada'});
     
-    const current = parseFloat(goal['MontoAhorrado'] || 0);
-    const added = parseFloat(data['amount']); 
-    const newTotal = current + added;
+    // Si viene 'amount', sumamos al ahorro (es un avance)
+    if (data.hasOwnProperty('amount')) {
+        const current = parseFloat(goal['MontoAhorrado'] || 0);
+        const added = parseFloat(data['amount']); 
+        const newTotal = current + added;
+        return updateRow(SHEET_NAMES.GOALS, data['ID'], { 'MontoAhorrado': newTotal });
+    }
     
-    return updateRow(SHEET_NAMES.GOALS, data['ID'], { 'MontoAhorrado': newTotal });
+    // Si no, es una edición completa (metadatos)
+    const id = data.ID;
+    delete data.ID;
+    return updateRow(SHEET_NAMES.GOALS, id, data);
 }
 
 
