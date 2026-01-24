@@ -94,6 +94,21 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                     ...txData,
                     MesAfectacion: txData.monthEffect
                 });
+
+                // Lógica especial para Pago de Tarjetas
+                if (success && txData.category === 'Pago de Tarjetas' && txData.targetAccount) {
+                    console.log("AUTO-CREATING Card Income Move");
+                    await addTransaction({
+                        date: txData.date,
+                        type: 'Ingreso',
+                        category: 'Pago de Tarjetas',
+                        amount: txData.amount,
+                        account: txData.targetAccount,
+                        description: `Abono desde ${txData.account}`,
+                        MesAfectacion: txData.targetMonth || txData.monthEffect,
+                        Estado: 'Validado'
+                    });
+                }
             }
 
             if (success) {
@@ -262,7 +277,9 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
             </div>
 
             <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Cuenta / Tarjeta</label>
+                <label className="block text-xs font-bold text-indigo-600 mb-1 uppercase tracking-wider">
+                    {formData.category === 'Pago de Tarjetas' ? 'Pagar desde... (Origen)' : 'Cuenta / Tarjeta'}
+                </label>
                 <select
                     name="account"
                     value={formData.account}
@@ -302,6 +319,39 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                     placeholder="Ej: Supermercado"
                 />
             </div>
+
+            {formData.category === 'Pago de Tarjetas' && (
+                <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100 space-y-3 animate-fadeIn">
+                    <p className="text-[10px] font-bold text-indigo-600 uppercase">Detalles del Abono</p>
+                    <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tarjeta a Pagar</label>
+                        <select
+                            name="targetAccount"
+                            value={formData.targetAccount || ''}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-sm"
+                        >
+                            <option value="">Seleccionar Tarjeta...</option>
+                            {accounts.filter(a => a.Tipo === 'Tarjeta de Crédito').map(a => (
+                                <option key={a.ID} value={a.Nombre}>{a.Nombre}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Mes que estás pagando</label>
+                        <input
+                            type="month"
+                            name="targetMonth"
+                            value={formData.targetMonth || formData.monthEffect}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                        />
+                        <p className="text-[10px] text-indigo-400 mt-1">Este abono reducirá la deuda de este mes en la tarjeta.</p>
+                    </div>
+                </div>
+            )}
 
             <button
                 type="submit"

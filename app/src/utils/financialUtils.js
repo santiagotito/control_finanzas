@@ -41,12 +41,8 @@ export const calculateCategoryTotals = (transactions) => {
 };
 
 export const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-CO', { // Asumiendo formato Latam/CO por el usuario "Santi"
+    return new Intl.NumberFormat('es-CO', {
         style: 'currency',
-        currency: 'COP', // O USD, dejaré COP por probabilidad, o genérico. Mejor USD si no sé. 
-        // "Santi" y "Control Financiero" suena genérico hispano. Usaré USD por defecto para no errar, o local.
-        // Voy a usar style currency sin currency definido para usar locale default o poner '$'.
-        // Mejor: opción configurable, pero por ahora USD.
         currency: 'USD',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,

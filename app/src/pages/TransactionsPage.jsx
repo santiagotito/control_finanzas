@@ -3,11 +3,11 @@ import { useAppContext } from '../context/AppContext';
 import TransactionForm from '../components/forms/TransactionForm';
 import { formatCurrency } from '../utils/financialUtils';
 import { generateProjectedTransactions, getInstallmentInfo } from '../utils/projectionUtils';
-import { CheckCircle2, Circle, Clock, AlertCircle, Calendar as CalendarIcon, ArrowRight, Loader2, Trash2, Pencil, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, AlertCircle, Calendar as CalendarIcon, ArrowRight, Loader2, Trash2, Pencil, RotateCcw, Settings2, Save } from 'lucide-react';
 import { API_URL } from '../config';
 
 const TransactionsPage = () => {
-    const { transactions, recurringRules, loading, addTransaction, updateTransaction, deleteTransaction, refreshData, accounts } = useAppContext();
+    const { transactions, recurringRules, loading, addTransaction, updateTransaction, deleteTransaction, refreshData, accounts, updateAccount } = useAppContext();
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [statusFilter, setStatusFilter] = useState('Todos');
     const [typeFilter, setTypeFilter] = useState('Todos');
@@ -19,6 +19,8 @@ const TransactionsPage = () => {
 
     const [processingId, setProcessingId] = useState(null);
     const [transactionToEdit, setTransactionToEdit] = useState(null);
+    const [showCardSettings, setShowCardSettings] = useState(false);
+    const [cardSettingsData, setCardSettingsData] = useState({ cutoffDay: '', paymentDay: '' });
     const [sortConfig, setSortConfig] = useState({ key: 'Fecha', direction: 'desc' });
 
     const handleSort = (key) => {
@@ -283,6 +285,44 @@ const TransactionsPage = () => {
         }
     };
 
+    const activeCard = useMemo(() => {
+        if (accountFilter === 'Todas') return null;
+        return accounts.find(a =>
+            String(a.Nombre).trim().toUpperCase() === String(accountFilter).trim().toUpperCase() &&
+            a.Tipo === 'Tarjeta de Crédito'
+        );
+    }, [accountFilter, accounts]);
+
+    const handleOpenCardSettings = () => {
+        if (!activeCard) return;
+        setCardSettingsData({
+            cutoffDay: activeCard.DiaCorte || '',
+            paymentDay: activeCard.DiaPago || ''
+        });
+        setShowCardSettings(true);
+    };
+
+    const handleSaveCardSettings = async () => {
+        if (!activeCard) return;
+        setProcessingId('card-settings');
+        try {
+            const success = await updateAccount({
+                ...activeCard,
+                id: activeCard.ID,
+                name: activeCard.Nombre,
+                type: activeCard.Tipo,
+                cutoffDay: cardSettingsData.cutoffDay,
+                paymentDay: cardSettingsData.paymentDay
+            });
+            if (success) setShowCardSettings(false);
+            else alert("Error al actualizar fechas de la tarjeta");
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <header className="space-y-3">
@@ -372,6 +412,59 @@ const TransactionsPage = () => {
                     </div>
                 </div>
 
+                {/* Modal de Configuración de Tarjeta */}
+                {showCardSettings && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-scaleIn">
+                            <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                <Settings2 className="text-indigo-600" size={20} />
+                                Configurar {activeCard?.Nombre}
+                            </h3>
+                            <p className="text-sm text-gray-500 mb-6">Ajusta las fechas de facturación para proyecciones precisas.</p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Día de Corte (1-31)</label>
+                                    <input
+                                        type="number"
+                                        min="1" max="31"
+                                        value={cardSettingsData.cutoffDay}
+                                        onChange={e => setCardSettingsData({ ...cardSettingsData, cutoffDay: e.target.value })}
+                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Día de Pago (1-31)</label>
+                                    <input
+                                        type="number"
+                                        min="1" max="31"
+                                        value={cardSettingsData.paymentDay}
+                                        onChange={e => setCardSettingsData({ ...cardSettingsData, paymentDay: e.target.value })}
+                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 mt-8">
+                                <button
+                                    onClick={() => setShowCardSettings(false)}
+                                    className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleSaveCardSettings}
+                                    disabled={processingId === 'card-settings'}
+                                    className="flex-1 bg-indigo-600 text-white rounded-xl px-4 py-2.5 text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {processingId === 'card-settings' ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                    Confirmar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* KPIs Cards - Diseño Compacto */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {/* CARD INGRESOS */}
@@ -454,16 +547,28 @@ const TransactionsPage = () => {
                 {/* List Section */}
                 <div className="xl:col-span-8 space-y-4">
                     {/* Tabs Tipo */}
-                    <div className="flex bg-gray-100 p-1 rounded-lg w-fit text-sm font-medium">
-                        {['Todos', 'Ingreso', 'Gasto'].map(type => (
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex bg-gray-100 p-1 rounded-lg w-fit text-sm font-medium">
+                            {['Todos', 'Ingreso', 'Gasto'].map(type => (
+                                <button
+                                    key={type}
+                                    onClick={() => setTypeFilter(type)}
+                                    className={`px-4 py-1.5 rounded-lg transition-all ${typeFilter === type ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    {type === 'Todos' ? 'Todos' : type === 'Ingreso' ? 'Ingresos' : 'Gastos'}
+                                </button>
+                            ))}
+                        </div>
+
+                        {activeCard && (
                             <button
-                                key={type}
-                                onClick={() => setTypeFilter(type)}
-                                className={`px-4 py-1.5 rounded-lg transition-all ${typeFilter === type ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                onClick={handleOpenCardSettings}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm animate-fadeIn"
                             >
-                                {type === 'Todos' ? 'Todos' : type === 'Ingreso' ? 'Ingresos' : 'Gastos'}
+                                <Settings2 size={16} />
+                                Estado de Cuenta: {activeCard.Nombre}
                             </button>
-                        ))}
+                        )}
                     </div>
 
                     {loading && allItems.length === 0 ? (

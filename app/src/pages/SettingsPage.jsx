@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAppContext } from '../context/AppContext';
+
 import { Bell, CreditCard, Calendar } from 'lucide-react';
-import { addDays, format, isAfter, isBefore, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 
 // Placeholder para alertas
 // En una app real, estas fechas vendrían de la configuración de la tarjeta (día de corte/pago)

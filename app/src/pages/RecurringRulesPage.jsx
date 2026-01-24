@@ -114,7 +114,6 @@ const RecurringRulesPage = () => {
 
     // Filtros para selects
     const categories = settings.filter(s => s.Tipo === formData.type);
-    const accountNames = accounts.map(a => a.Nombre);
 
     // Cálculos de Resumen
     const totalMonthlyFixed = recurringRules

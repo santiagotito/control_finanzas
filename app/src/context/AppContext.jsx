@@ -206,6 +206,7 @@ export const AppProvider = ({ children }) => {
             updateTransaction,
             deleteTransaction,
             addAccount,
+            updateAccount,
             deleteAccount,
             addGoal,
             updateGoal,
