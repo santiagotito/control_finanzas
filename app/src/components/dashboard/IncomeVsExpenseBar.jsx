@@ -19,7 +19,7 @@ const CustomLabel = (props) => {
     );
 };
 
-const IncomeVsExpenseBar = ({ income, expense }) => {
+const IncomeVsExpenseBar = ({ income, expense, onBarClick }) => {
 
     const data = [
         { name: 'Ingresos', amount: income, color: '#10b981' }, // Emerald-500
@@ -43,7 +43,13 @@ const IncomeVsExpenseBar = ({ income, expense }) => {
                             formatter={(value) => formatCurrency(value)}
                             cursor={{ fill: 'transparent' }}
                         />
-                        <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={40}>
+                        <Bar
+                            dataKey="amount"
+                            radius={[0, 4, 4, 0]}
+                            barSize={40}
+                            onClick={(data) => onBarClick && onBarClick(data)}
+                            style={{ cursor: 'pointer' }}
+                        >
                             {data.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}

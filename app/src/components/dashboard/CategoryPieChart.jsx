@@ -7,7 +7,7 @@ const COLORS = [
     '#3b82f6', '#ef4444', '#10b981', '#f97316', '#64748b'
 ];
 
-const CategoryPieChart = ({ transactions }) => {
+const CategoryPieChart = ({ transactions, onSliceClick }) => {
     const data = calculateCategoryTotals(transactions) || [];
     const total = data.reduce((acc, curr) => acc + (curr.value || 0), 0);
 
@@ -32,6 +32,8 @@ const CategoryPieChart = ({ transactions }) => {
                                 outerRadius={80}
                                 paddingAngle={2}
                                 dataKey="value"
+                                onClick={(entry) => onSliceClick && onSliceClick(entry)}
+                                style={{ cursor: 'pointer' }}
                             >
                                 {data.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -62,7 +64,11 @@ const CategoryPieChart = ({ transactions }) => {
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {data.map((entry, index) => (
-                                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                <tr
+                                    key={index}
+                                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                    onClick={() => onSliceClick && onSliceClick(entry)}
+                                >
                                     <td className="py-2 flex items-center gap-2 text-gray-600">
                                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
                                         <span className="truncate max-w-[200px] inline-block" title={entry.name}>{entry.name}</span>

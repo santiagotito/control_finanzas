@@ -13,6 +13,8 @@ import { Link } from 'react-router-dom';
 const Dashboard = () => {
     const { loading, error, transactions, recurringRules, accounts } = useAppContext(); // [MODIFIED] Added accounts
     const [showCalculator, setShowCalculator] = useState(false);
+    const [selectedDrillDown, setSelectedDrillDown] = useState(null); // { title: string, transactions: [] }
+    const [sortConfig, setSortConfig] = useState({ key: 'Fecha', direction: 'desc' });
 
     // [NEW] Filtros Independientes para Dashboard
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -97,6 +99,50 @@ const Dashboard = () => {
         };
     }, [transactions, selectedMonth, selectedAccount, recurringRules]);
 
+    const handleBarClick = (data) => {
+        if (!data || !data.payload) return;
+        const type = data.payload.name === 'Ingresos' ? 'Ingreso' : 'Gasto';
+        const drillTransactions = stats.filteredTransactions.filter(t => t.Tipo === type);
+        setSelectedDrillDown({
+            title: `Detalle de ${data.payload.name}`,
+            transactions: drillTransactions
+        });
+    };
+
+    const handleSliceClick = (entry) => {
+        if (!entry) return;
+        const drillTransactions = stats.filteredTransactions.filter(t => t.Categoria === entry.name);
+        setSelectedDrillDown({
+            title: `Categoría: ${entry.name}`,
+            transactions: drillTransactions
+        });
+    };
+
+    const handleSort = (key) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const sortedTransactions = React.useMemo(() => {
+        const items = [...transactions.slice(0, 15)];
+        return items.sort((a, b) => {
+            let valA = a[sortConfig.key];
+            let valB = b[sortConfig.key];
+
+            // Handle numeric values
+            if (sortConfig.key === 'Monto') {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+            }
+
+            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [transactions, sortConfig]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -175,8 +221,11 @@ const Dashboard = () => {
             {/* RESUMEN MENSUAL CLAVE */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* INGRESOS */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-emerald-100 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                <div
+                    onClick={() => handleBarClick({ payload: { name: 'Ingresos' } })}
+                    className="bg-white p-6 rounded-xl shadow-sm border border-emerald-100 relative overflow-hidden cursor-pointer hover:shadow-md hover:border-emerald-200 transition-all group"
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <div className="w-16 h-16 bg-emerald-500 rounded-full"></div>
                     </div>
                     <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-2">Ingresos (Mes)</h3>
@@ -194,8 +243,11 @@ const Dashboard = () => {
                 </div>
 
                 {/* GASTOS */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-red-100 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                <div
+                    onClick={() => handleBarClick({ payload: { name: 'Gastos' } })}
+                    className="bg-white p-6 rounded-xl shadow-sm border border-red-100 relative overflow-hidden cursor-pointer hover:shadow-md hover:border-red-200 transition-all group"
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <div className="w-16 h-16 bg-red-500 rounded-full"></div>
                     </div>
                     <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-2">Gastos (Mes)</h3>
@@ -258,6 +310,7 @@ const Dashboard = () => {
                     <IncomeVsExpenseBar
                         income={stats.incomeReal + stats.pendingIncome}
                         expense={stats.expenseReal + stats.pendingExpense}
+                        onBarClick={handleBarClick}
                     />
                 </div>
 
@@ -270,7 +323,10 @@ const Dashboard = () => {
                 />
 
                 {/* FILA 3: Categorías (100%) */}
-                <CategoryPieChart transactions={stats.filteredTransactions} />
+                <CategoryPieChart
+                    transactions={stats.filteredTransactions}
+                    onSliceClick={handleSliceClick}
+                />
 
             </div>
 
@@ -284,16 +340,16 @@ const Dashboard = () => {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-500">
                             <tr>
-                                <th className="px-6 py-3 font-medium">Fecha</th>
-                                <th className="px-6 py-3 font-medium">Descripción</th>
-                                <th className="px-6 py-3 font-medium">Estado</th>
-                                <th className="px-6 py-3 font-medium">Categoría</th>
-                                <th className="px-6 py-3 font-medium text-right">Monto</th>
+                                <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('Fecha')}>Fecha {sortConfig.key === 'Fecha' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('Descripcion')}>Descripción {sortConfig.key === 'Descripcion' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('Estado')}>Estado {sortConfig.key === 'Estado' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('Categoria')}>Categoría {sortConfig.key === 'Categoria' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors text-right" onClick={() => handleSort('Monto')}>Monto {sortConfig.key === 'Monto' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {transactions.slice(0, 10).map((tx, idx) => (
-                                <tr key={idx} className="hover:bg-gray-50">
+                            {sortedTransactions.map((tx, idx) => (
+                                <tr key={tx.ID || idx} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{tx.Fecha ? tx.Fecha.split('T')[0] : ''}</td>
                                     <td className="px-6 py-4 font-medium text-gray-900">{tx.Descripcion || 'Sin descripción'}</td>
                                     <td className="px-6 py-4">
@@ -317,7 +373,7 @@ const Dashboard = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {transactions.length === 0 && (
+                            {sortedTransactions.length === 0 && (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-8 text-center text-gray-400">
                                         No hay transacciones recientes
@@ -328,7 +384,62 @@ const Dashboard = () => {
                     </table>
                 </div>
             </div>
-        </div >
+
+            {/* MODAL DE DESGLOSE (Drill-down) */}
+            {selectedDrillDown && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col animate-scaleIn">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800">{selectedDrillDown.title}</h3>
+                                <p className="text-xs text-gray-500">{selectedDrillDown.transactions.length} movimientos encontrados</p>
+                            </div>
+                            <button onClick={() => setSelectedDrillDown(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <Plus className="rotate-45 text-gray-400 hover:text-gray-600" size={24} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-0 scrollbar-hide">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 text-gray-500 sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-3 font-medium">Fecha</th>
+                                        <th className="px-6 py-3 font-medium">Descripción</th>
+                                        <th className="px-6 py-3 font-medium">Cuenta</th>
+                                        <th className="px-6 py-3 font-medium text-right">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {selectedDrillDown.transactions.map((tx, idx) => (
+                                        <tr key={tx.ID || idx} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-gray-500 whitespace-nowrap text-xs">{tx.Fecha ? tx.Fecha.split('T')[0] : ''}</td>
+                                            <td className="px-6 py-4 font-medium text-gray-800">{tx.Descripcion}</td>
+                                            <td className="px-6 py-4 text-gray-500 text-xs">{tx.Cuenta}</td>
+                                            <td className={`px-6 py-4 text-right font-bold ${tx.Tipo === 'Ingreso' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {tx.Tipo === 'Gasto' ? '-' : '+'}{formatCurrency(parseFloat(tx.Monto))}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {selectedDrillDown.transactions.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="px-6 py-12 text-center text-gray-400">No hay movimientos en esta selección</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end items-center gap-4">
+                            <div className="text-sm">
+                                <span className="text-gray-500 mr-2">Total en vista:</span>
+                                <span className="font-bold text-gray-800 text-lg">
+                                    {formatCurrency(selectedDrillDown.transactions.reduce((acc, curr) => acc + (parseFloat(curr.Monto) || 0), 0))}
+                                </span>
+                            </div>
+                            <button onClick={() => setSelectedDrillDown(null)} className="px-5 py-2 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-colors shadow-lg">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 
