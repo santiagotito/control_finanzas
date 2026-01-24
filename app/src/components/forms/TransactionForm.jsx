@@ -18,7 +18,11 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
         account: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
-        monthEffect: new Date().toISOString().slice(0, 7)
+        monthEffect: new Date().toISOString().slice(0, 7),
+        hasCommission: false,
+        commissionAmount: '',
+        hasTax: false,
+        taxAmount: ''
     };
 
     const [formData, setFormData] = useState(defaultState);
@@ -40,7 +44,11 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                 date: initialData.Fecha.split('T')[0],
                 monthEffect: mEff,
                 // Preservamos estado validado si viene de proyección
-                Estado: 'Validado'
+                Estado: 'Validado',
+                hasCommission: false,
+                commissionAmount: '',
+                hasTax: false,
+                taxAmount: ''
             });
         }
     }, [initialData]);
@@ -109,14 +117,41 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                         Estado: 'Validado'
                     });
                 }
+
+                // Lógica especial para Comisiones
+                if (success && txData.hasCommission && txData.commissionAmount) {
+                    console.log("AUTO-CREATING Commission Move");
+                    await addTransaction({
+                        date: txData.date,
+                        type: 'Gasto',
+                        category: 'Comisiones',
+                        amount: parseFloat(txData.commissionAmount),
+                        account: txData.account,
+                        description: `Comisión: ${txData.description}`,
+                        MesAfectacion: txData.monthEffect,
+                        Estado: txData.id ? (initialData?.Estado || 'Pendiente') : 'Validado'
+                    });
+                }
+
+                // Lógica especial para Impuestos/IVA
+                if (success && txData.hasTax && txData.taxAmount) {
+                    console.log("AUTO-CREATING Tax Move");
+                    await addTransaction({
+                        date: txData.date,
+                        type: 'Gasto',
+                        category: 'Impuestos',
+                        amount: parseFloat(txData.taxAmount),
+                        account: txData.account,
+                        description: `Impuesto/IVA: ${txData.description}`,
+                        MesAfectacion: txData.monthEffect,
+                        Estado: txData.id ? (initialData?.Estado || 'Pendiente') : 'Validado'
+                    });
+                }
             }
 
             if (success) {
-                // Clear form if it was a create action (or we want to reset)
-                // For editing, we usually close the modal, handled by onSuccess
-                if (!formData.id || formData.isVirtual) {
-                    setFormData(defaultState);
-                }
+                // Siempre limpiar el formulario tras éxito para permitir nueva entrada inmediata
+                setFormData(defaultState);
 
                 if (onSuccess) onSuccess();
             } else {
@@ -193,6 +228,70 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                     />
                 </div>
             </div>
+
+            {formData.type === 'Gasto' && (
+                <div className="flex flex-col gap-2 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            name="hasCommission"
+                            checked={formData.hasCommission}
+                            onChange={(e) => setFormData({ ...formData, hasCommission: e.target.checked })}
+                            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        />
+                        <span className="text-xs font-bold text-gray-600 uppercase">¿Tiene Comisión?</span>
+                    </label>
+
+                    {formData.hasCommission && (
+                        <div className="flex items-center gap-2 animate-fadeIn">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase whitespace-nowrap">Monto Comisión:</label>
+                            <div className="relative flex-1">
+                                <span className="absolute left-2 top-1.5 text-gray-400 text-[10px]">$</span>
+                                <input
+                                    type="number"
+                                    name="commissionAmount"
+                                    value={formData.commissionAmount}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    className="w-full pl-5 pr-2 py-1 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-300 outline-none text-xs font-bold"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {formData.type === 'Gasto' && (
+                <div className="flex flex-col gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            name="hasTax"
+                            checked={formData.hasTax}
+                            onChange={(e) => setFormData({ ...formData, hasTax: e.target.checked })}
+                            className="w-4 h-4 text-slate-600 border-gray-300 rounded focus:ring-slate-500"
+                        />
+                        <span className="text-xs font-bold text-slate-600 uppercase">¿Tiene Impuesto/IVA?</span>
+                    </label>
+
+                    {formData.hasTax && (
+                        <div className="flex items-center gap-2 animate-fadeIn">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase whitespace-nowrap">Monto Impuesto:</label>
+                            <div className="relative flex-1">
+                                <span className="absolute left-2 top-1.5 text-gray-400 text-[10px]">$</span>
+                                <input
+                                    type="number"
+                                    name="taxAmount"
+                                    value={formData.taxAmount}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    className="w-full pl-5 pr-2 py-1 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-300 outline-none text-xs font-bold"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
