@@ -75,6 +75,16 @@ const Dashboard = () => {
         const totalExpense = expenseReal + pendingExpense;
         const budgetLimit = totalIncome > 0 ? totalIncome : (totalExpense > 0 ? totalExpense * 1.2 : 1000);
 
+        // [NEW] Filtramos las transacciones reales que cumplen con los filtros
+        const filteredTransactions = transactions.filter(t => {
+            if (!t || !t.Fecha) return false;
+            let rawDate = t.MesAfectacion || t.Fecha;
+            const targetMonth = rawDate.length > 7 ? rawDate.slice(0, 7) : rawDate;
+            if (targetMonth !== selectedMonth) return false;
+            if (selectedAccount !== 'Todas' && t.Cuenta !== selectedAccount) return false;
+            return true;
+        });
+
         return {
             incomeReal,
             expenseReal,
@@ -82,9 +92,10 @@ const Dashboard = () => {
             pendingExpense,
             balanceReal: incomeReal - expenseReal,
             balanceTotal: (incomeReal + pendingIncome) - (expenseReal + pendingExpense),
-            budgetLimit // Pasaremos esto al Gauge
+            budgetLimit, // Pasaremos esto al Gauge
+            filteredTransactions // [NEW] Pasar las transacciones filtradas
         };
-    }, [transactions, selectedMonth, selectedAccount]);
+    }, [transactions, selectedMonth, selectedAccount, recurringRules]);
 
     if (loading) {
         return (
@@ -239,24 +250,27 @@ const Dashboard = () => {
                 {/* FILA 1: Presupuesto y Balance (50% / 50%) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <BudgetGauge
-                        transactions={transactions}
+                        transactions={stats.filteredTransactions}
                         budgetLimit={stats.budgetLimit}
                         currentMonthExpense={stats.expenseReal + stats.pendingExpense}
                         recurringRules={recurringRules}
                     />
-                    <IncomeVsExpenseBar transactions={transactions} />
+                    <IncomeVsExpenseBar
+                        income={stats.incomeReal + stats.pendingIncome}
+                        expense={stats.expenseReal + stats.pendingExpense}
+                    />
                 </div>
 
                 {/* FILA 2: Flujo de Caja Proyectado (100%) */}
                 <ProjectedCashFlow
-                    transactions={transactions}
+                    transactions={stats.filteredTransactions}
                     recurringRules={recurringRules}
                     currentBalance={stats.balanceReal}
                     selectedAccount={selectedAccount}
                 />
 
                 {/* FILA 3: Categorías (100%) */}
-                <CategoryPieChart transactions={transactions} />
+                <CategoryPieChart transactions={stats.filteredTransactions} />
 
             </div>
 

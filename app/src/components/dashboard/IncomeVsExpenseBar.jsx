@@ -19,8 +19,7 @@ const CustomLabel = (props) => {
     );
 };
 
-const IncomeVsExpenseBar = ({ transactions }) => {
-    const { income, expense } = calculateMonthlyTotals(transactions);
+const IncomeVsExpenseBar = ({ income, expense }) => {
 
     const data = [
         { name: 'Ingresos', amount: income, color: '#10b981' }, // Emerald-500

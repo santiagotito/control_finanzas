@@ -64,11 +64,12 @@ const BudgetGauge = ({ transactions, budgetLimit = 0, currentMonthExpense = 0, r
         }
     }, [viewMode, transactions, budgetLimit, currentMonthExpense, recurringRules]);
 
-    // Porcentaje
-    const percentage = Math.min(100, Math.max(0, (expenseValue / limitValue) * 100));
+    // Porcentaje (Permitir que supere el 100% para mostrar sobregiro)
+    const percentage = Math.max(0, (expenseValue / limitValue) * 100);
 
     const data = [
-        { name: 'Gastado', value: expenseValue },
+        { name: 'Gastado', value: Math.min(expenseValue, limitValue) },
+        { name: 'Excedente', value: Math.max(0, expenseValue - limitValue) },
         { name: 'Restante', value: Math.max(0, limitValue - expenseValue) }
     ];
 
@@ -104,9 +105,11 @@ const BudgetGauge = ({ transactions, budgetLimit = 0, currentMonthExpense = 0, r
                             innerRadius={80}
                             outerRadius={100}
                             paddingAngle={0}
+                            stroke="none"
                         >
-                            <Cell fill={color} />
-                            <Cell fill="#f3f4f6" />
+                            <Cell fill={percentage > 90 ? '#ef4444' : '#10b981'} /> {/* Gastado */}
+                            <Cell fill="#ef4444" /> {/* Excedente (Siempre rojo si existe) */}
+                            <Cell fill="#f3f4f6" /> {/* Restante */}
                         </Pie>
                     </PieChart>
                 </ResponsiveContainer>

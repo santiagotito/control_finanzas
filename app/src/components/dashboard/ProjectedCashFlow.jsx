@@ -119,7 +119,6 @@ const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, s
                             formatter={(value) => formatCurrency(value)}
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                         />
-                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
 
                         <Bar dataKey="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} stackId="a" />
                         <Bar dataKey="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={12} stackId="b" />

@@ -65,7 +65,7 @@ const CategoryPieChart = ({ transactions }) => {
                                 <tr key={index} className="hover:bg-gray-50 transition-colors">
                                     <td className="py-2 flex items-center gap-2 text-gray-600">
                                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                        <span className="truncate max-w-[100px]" title={entry.name}>{entry.name}</span>
+                                        <span className="truncate max-w-[200px] inline-block" title={entry.name}>{entry.name}</span>
                                     </td>
                                     <td className="py-2 text-right font-medium text-gray-800">
                                         {formatCurrency(entry.value)}
