@@ -124,6 +124,17 @@ const RecurringRulesPage = () => {
         .filter(r => r.Tipo === 'Ingreso' && r.Frecuencia === 'Mensual')
         .reduce((sum, r) => sum + parseFloat(r.Monto), 0);
 
+    const groupedRules = React.useMemo(() => {
+        return recurringRules.reduce((acc, curr) => {
+            const accName = curr.Cuenta || 'Sin Cuenta';
+            if (!acc[accName]) acc[accName] = { income: 0, expense: 0, rules: [] };
+            acc[accName].rules.push(curr);
+            if (curr.Tipo === 'Ingreso') acc[accName].income += parseFloat(curr.Monto) || 0;
+            else acc[accName].expense += parseFloat(curr.Monto) || 0;
+            return acc;
+        }, {});
+    }, [recurringRules]);
+
     return (
         <div className="space-y-6">
             <header>
@@ -337,54 +348,73 @@ const RecurringRulesPage = () => {
                 </form>
             )}
 
-            {/* Lista de Reglas */}
+            {/* Lista de Reglas Agrupadas */}
             {loading ? <div className="text-center py-10">Cargando reglas...</div> : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {recurringRules.map(rule => (
-                        <div key={rule.ID} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center group hover:border-indigo-100 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <div className={`p-3 rounded-full ${rule.Tipo === 'Ingreso' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                                    {rule.Tipo === 'Ingreso' ? <RefreshCw size={20} /> : <Calendar size={20} />}
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-gray-800">{rule.Nombre}</h4>
-                                    <div className="text-sm text-gray-500 flex flex-col">
-                                        <span className="font-medium text-indigo-600 text-xs">{rule.Cuenta}</span>
-                                        <span>{rule.Frecuencia} • Día {rule.DiaEjecucion}</span>
-                                        {rule.FechaFin && rule.FechaInicio && (
-                                            <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full w-fit my-1 border border-indigo-100">
-                                                Cuota {getInstallmentInfo(rule, new Date().toISOString().split('T')[0]) || 'Regla Activa'}
-                                            </span>
-                                        )}
-                                        <span className="text-xs text-gray-400">
-                                            {rule.FechaFin ? `Hasta ${rule.FechaFin.split('T')[0]}` : 'Indefinido'}
-                                        </span>
-                                    </div>
+                <div className="space-y-8">
+                    {Object.entries(groupedRules).map(([accountName, group]) => (
+                        <div key={accountName} className="space-y-4">
+                            <div className="flex justify-between items-center px-4 py-2 bg-gray-100 rounded-xl border border-gray-200 shadow-sm">
+                                <h4 className="font-black text-gray-700 uppercase tracking-widest text-sm flex items-center gap-2">
+                                    <div className="w-2 h-4 bg-indigo-500 rounded-full"></div>
+                                    {accountName}
+                                </h4>
+                                <div className="flex gap-4 text-xs font-bold">
+                                    {group.income > 0 && <span className="text-emerald-600">Ingresos: {formatCurrency(group.income)}</span>}
+                                    {group.expense > 0 && <span className="text-red-600">Gastos: {formatCurrency(group.expense)}</span>}
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className={`font-bold ${rule.Tipo === 'Ingreso' ? 'text-emerald-600' : 'text-red-600'}`}>
-                                    {formatCurrency(rule.Monto)}
-                                </p>
-                                <button
-                                    onClick={() => handleEdit(rule)}
-                                    className="mt-2 p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all mr-1"
-                                    title="Editar regla"
-                                >
-                                    <Edit size={16} />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(rule.ID)}
-                                    className="mt-2 p-2 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                    title="Eliminar regla"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {group.rules.map(rule => (
+                                    <div key={rule.ID} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center group hover:border-indigo-100 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-3 rounded-full ${rule.Tipo === 'Ingreso' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                                                {rule.Tipo === 'Ingreso' ? <RefreshCw size={20} /> : <Calendar size={20} />}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-gray-800">{rule.Nombre}</h4>
+                                                <div className="text-sm text-gray-500 flex flex-col">
+                                                    <span>{rule.Frecuencia} • Día {rule.DiaEjecucion}</span>
+                                                    {rule.FechaFin && rule.FechaInicio && (
+                                                        <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full w-fit my-1 border border-indigo-100">
+                                                            Cuota {getInstallmentInfo(rule, new Date().toISOString().split('T')[0]) || 'Regla Activa'}
+                                                        </span>
+                                                    )}
+                                                    <span className="text-xs text-gray-400">
+                                                        {rule.FechaFin ? `Hasta ${rule.FechaFin.split('T')[0]}` : 'Indefinido'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className={`font-bold ${rule.Tipo === 'Ingreso' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {formatCurrency(rule.Monto)}
+                                            </p>
+                                            <div className="flex gap-1 justify-end mt-2">
+                                                <button
+                                                    onClick={() => handleEdit(rule)}
+                                                    className="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                                    title="Editar regla"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(rule.ID)}
+                                                    className="p-2 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                    title="Eliminar regla"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     ))}
+
                     {recurringRules.length === 0 && !loading && (
-                        <div className="col-span-full text-center py-12 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                             No tienes reglas recurrentes configuradas.
                         </div>
                     )}

@@ -15,6 +15,7 @@ const Dashboard = () => {
     const [showCalculator, setShowCalculator] = useState(false);
     const [selectedDrillDown, setSelectedDrillDown] = useState(null); // { title: string, transactions: [] }
     const [sortConfig, setSortConfig] = useState({ key: 'Fecha', direction: 'desc' });
+    const [drillSortConfig, setDrillSortConfig] = useState({ key: 'Fecha', direction: 'desc' });
 
     // [NEW] Filtros Independientes para Dashboard
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -142,6 +143,31 @@ const Dashboard = () => {
             return 0;
         });
     }, [transactions, sortConfig]);
+
+    const handleDrillSort = (key) => {
+        setDrillSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const sortedDrillTransactions = React.useMemo(() => {
+        if (!selectedDrillDown) return [];
+        const items = [...selectedDrillDown.transactions];
+        return items.sort((a, b) => {
+            let valA = a[drillSortConfig.key];
+            let valB = b[drillSortConfig.key];
+
+            if (drillSortConfig.key === 'Monto') {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+            }
+
+            if (valA < valB) return drillSortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return drillSortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [selectedDrillDown, drillSortConfig]);
 
     if (loading) {
         return (
@@ -402,14 +428,14 @@ const Dashboard = () => {
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-gray-50 text-gray-500 sticky top-0">
                                     <tr>
-                                        <th className="px-6 py-3 font-medium">Fecha</th>
-                                        <th className="px-6 py-3 font-medium">Descripción</th>
-                                        <th className="px-6 py-3 font-medium">Cuenta</th>
-                                        <th className="px-6 py-3 font-medium text-right">Monto</th>
+                                        <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleDrillSort('Fecha')}>Fecha {drillSortConfig.key === 'Fecha' && (drillSortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                        <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleDrillSort('Descripcion')}>Descripción {drillSortConfig.key === 'Descripcion' && (drillSortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                        <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleDrillSort('Cuenta')}>Cuenta {drillSortConfig.key === 'Cuenta' && (drillSortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                        <th className="px-6 py-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors text-right" onClick={() => handleDrillSort('Monto')}>Monto {drillSortConfig.key === 'Monto' && (drillSortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {selectedDrillDown.transactions.map((tx, idx) => (
+                                    {sortedDrillTransactions.map((tx, idx) => (
                                         <tr key={tx.ID || idx} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 text-gray-500 whitespace-nowrap text-xs">{tx.Fecha ? tx.Fecha.split('T')[0] : ''}</td>
                                             <td className="px-6 py-4 font-medium text-gray-800">{tx.Descripcion}</td>
@@ -419,7 +445,7 @@ const Dashboard = () => {
                                             </td>
                                         </tr>
                                     ))}
-                                    {selectedDrillDown.transactions.length === 0 && (
+                                    {sortedDrillTransactions.length === 0 && (
                                         <tr>
                                             <td colSpan="4" className="px-6 py-12 text-center text-gray-400">No hay movimientos en esta selección</td>
                                         </tr>

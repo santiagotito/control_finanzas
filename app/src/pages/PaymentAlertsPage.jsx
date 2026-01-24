@@ -44,10 +44,9 @@ const PaymentAlertsPage = () => {
         };
     }, [accounts, currentDay]);
 
-    // 2. Alertas de Pagos Escalonados (Cuotas 1/X)
-    const installmentAlerts = useMemo(() => {
-        // Reglas que son Gastos y tienen Fecha de Fin (indicativo de cuotas/créditos)
-        return recurringRules
+    // 2. Alertas de Pagos Escalonados (Cuotas 1/X) Agrupadas por Cuenta
+    const groupedInstallments = useMemo(() => {
+        const flatAlerts = recurringRules
             .filter(rule => rule.Tipo === 'Gasto' && rule.FechaFin)
             .map(rule => {
                 const dateStr = today.toISOString().split('T')[0];
@@ -68,8 +67,30 @@ const PaymentAlertsPage = () => {
                     daysToPay,
                     isNear: daysToPay <= 7
                 };
-            })
-            .sort((a, b) => a.daysToPay - b.daysToPay);
+            });
+
+        // Agrupar
+        const grouped = flatAlerts.reduce((acc, curr) => {
+            const accName = curr.Cuenta || 'Sin Cuenta';
+            if (!acc[accName]) {
+                acc[accName] = {
+                    items: [],
+                    totalAmount: 0,
+                    isAnyNear: false
+                };
+            }
+            acc[accName].items.push(curr);
+            acc[accName].totalAmount += parseFloat(curr.Monto) || 0;
+            if (curr.isNear) acc[accName].isAnyNear = true;
+            return acc;
+        }, {});
+
+        // Ordenar cada grupo por proximidad
+        Object.values(grouped).forEach(group => {
+            group.items.sort((a, b) => a.daysToPay - b.daysToPay);
+        });
+
+        return grouped;
     }, [recurringRules, currentDay]);
 
     return (
@@ -153,30 +174,44 @@ const PaymentAlertsPage = () => {
                     <h3 className="font-bold text-gray-800 flex items-center gap-2 px-1">
                         <Calendar size={18} className="text-emerald-500" /> Vencimientos de Cuotas
                     </h3>
-                    <div className="space-y-3">
-                        {installmentAlerts.map(rule => (
-                            <div key={rule.ID} className={`flex items-center justify-between p-4 rounded-xl border transition-all bg-white ${rule.isNear ? 'border-red-100 bg-red-50/30' : 'border-gray-100'}`}>
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg ${rule.isNear ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                        <Calendar size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-gray-800 leading-tight">{rule.Nombre}</p>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-indigo-600">{rule.installment}</span>
-                                            <span className="text-[10px] text-gray-400">• Vence el día {rule.DiaEjecucion}</span>
-                                        </div>
-                                    </div>
+                    <div className="space-y-6">
+                        {Object.entries(groupedInstallments).map(([accountName, group]) => (
+                            <div key={accountName} className="space-y-3">
+                                <div className="flex justify-between items-center px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                        <ArrowRight size={12} className="text-indigo-400" /> {accountName}
+                                    </span>
+                                    <span className="text-xs font-black text-gray-700">{formatCurrency(group.totalAmount)}</span>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-black text-gray-900">{formatCurrency(rule.Monto)}</p>
-                                    <p className={`text-[10px] font-bold uppercase ${rule.isNear ? 'text-red-600 animate-pulse' : 'text-gray-400'}`}>
-                                        {rule.isNear ? `¡Vence en ${rule.daysToPay} días!` : `En ${rule.daysToPay} días`}
-                                    </p>
+
+                                <div className="space-y-2">
+                                    {group.items.map(rule => (
+                                        <div key={rule.ID} className={`flex items-center justify-between p-3 rounded-xl border transition-all bg-white ${rule.isNear ? 'border-red-100 bg-red-50/30' : 'border-gray-50'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-1.5 rounded-lg ${rule.isNear ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                                                    <Calendar size={16} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-800 leading-tight">{rule.Nombre}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-indigo-600">{rule.installment}</span>
+                                                        <span className="text-[10px] text-gray-400">• Día {rule.DiaEjecucion}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-black text-gray-900">{formatCurrency(rule.Monto)}</p>
+                                                <p className={`text-[9px] font-bold uppercase ${rule.isNear ? 'text-red-600 animate-pulse' : 'text-gray-400'}`}>
+                                                    {rule.isNear ? `¡Vence en ${rule.daysToPay} ds!` : `En ${rule.daysToPay} días`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}
-                        {installmentAlerts.length === 0 && (
+
+                        {Object.keys(groupedInstallments).length === 0 && (
                             <div className="bg-white p-6 rounded-xl border border-dashed border-gray-200 text-center text-gray-400">
                                 <CheckCircle2 size={32} className="mx-auto mb-2 opacity-20" />
                                 <p className="text-sm">No tienes créditos o cuotas programadas</p>
