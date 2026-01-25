@@ -3,9 +3,10 @@ import { useAppContext } from '../context/AppContext';
 import { calculateCategoryTotals, formatCurrency } from '../utils/financialUtils';
 import { TrendingDown, Lightbulb, AlertTriangle } from 'lucide-react';
 import CategoryPieChart from '../components/dashboard/CategoryPieChart';
+import DebtAnalysisChart from '../components/dashboard/DebtAnalysisChart';
 
 const AnalysisPage = () => {
-    const { transactions, loading } = useAppContext();
+    const { transactions, accounts, recurringRules, loading } = useAppContext();
 
     if (loading) return <div>Cargando...</div>;
 
@@ -87,6 +88,19 @@ const AnalysisPage = () => {
                         })}
                         {categoryTotals.length === 0 && <p className="text-gray-400">Sin datos</p>}
                     </div>
+                </div>
+            </div>
+
+            {/* Análisis de Deuda */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mt-6">
+                <h3 className="font-bold text-gray-800 mb-1">Nivel de Endeudamiento</h3>
+                <p className="text-xs text-gray-500 mb-6">Comparativa de saldos actuales vs compromisos futuros por cuenta</p>
+                <div className="h-96">
+                    <DebtAnalysisChart
+                        accounts={accounts}
+                        recurringRules={recurringRules}
+                        transactions={transactions}
+                    />
                 </div>
             </div>
         </div>

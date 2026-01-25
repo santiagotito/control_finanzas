@@ -119,3 +119,47 @@ export const generateProjectedTransactions = (rules, yearMonth, existingTransact
         };
     });
 };
+
+/**
+ * Analiza las transacciones para determinar el estado de una regla (cuotas pagadas vs pendientes)
+ */
+export const getRuleStatus = (rule, transactions) => {
+    if (!rule.FechaInicio || !rule.FechaFin) {
+        return { isFinite: false, paid: 0, total: 0, nextInstallment: null };
+    }
+
+    const ruleName = (rule.Nombre || '').toLowerCase().trim();
+
+    // Filtrar transacciones que coincidan con esta regla y estén validadas
+    const matchedTxs = transactions.filter(t => {
+        if (t.Estado !== 'Validado') return false;
+        const txDesc = (t.Descripcion || '').toLowerCase().trim();
+        return txDesc === ruleName || txDesc.includes(ruleName) || ruleName.includes(txDesc);
+    });
+
+    // Calcular total de cuotas original
+    const start = new Date(rule.FechaInicio);
+    const end = new Date(rule.FechaFin);
+    const totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+
+    // Determinar cuántas cuotas UNICAS por mes se han pagado
+    const paidMonths = new Set();
+    matchedTxs.forEach(t => {
+        const date = t.MesAfectacion || t.Fecha;
+        if (date) {
+            paidMonths.add(date.substring(0, 7)); // YYYY-MM
+        }
+    });
+
+    const paidCount = paidMonths.size;
+    const remainingCount = Math.max(0, totalMonths - paidCount);
+
+    return {
+        isFinite: true,
+        paid: paidCount,
+        total: totalMonths,
+        remaining: remainingCount,
+        nextInstallment: paidCount < totalMonths ? `${paidCount + 1}/${totalMonths}` : 'Completado',
+        totalDebt: remainingCount * parseFloat(rule.Monto || 0)
+    };
+};

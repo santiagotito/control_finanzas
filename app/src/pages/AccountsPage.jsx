@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatCurrency } from '../utils/financialUtils';
+import { getRuleStatus } from '../utils/projectionUtils';
 import { CreditCard, Wallet, Plus, Save, Loader2, Trash2, Edit, ChevronDown, ChevronUp, Filter, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
 const AccountsPage = () => {
@@ -174,6 +175,20 @@ const AccountsPage = () => {
         return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
+    const getNextPaymentDate = (day) => {
+        if (!day) return null;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const currentDay = now.getDate();
+
+        let paymentDate = new Date(year, month, parseInt(day));
+        if (currentDay > parseInt(day)) {
+            paymentDate = new Date(year, month + 1, parseInt(day));
+        }
+        return paymentDate;
+    };
+
     return (
         <div className="space-y-6">
             <header className="flex justify-between items-center">
@@ -294,193 +309,220 @@ const AccountsPage = () => {
                                     {type}s
                                 </h3>
                                 <div className="space-y-4">
-                                    {typeAccounts.map((acc) => {
-                                        const isExpanded = expandedAccount === acc.ID;
-                                        // Para el header, calculamos el saldo TOTAL (sin filtros)
-                                        const headerStats = getAccountDetails(acc, { tipo: 'Todos', estado: 'Todos', mes: 'Todos' });
-                                        // Para el detalle, usamos los filtros activos
-                                        const details = isExpanded ? getAccountDetails(acc) : null;
+                                    {typeAccounts
+                                        .sort((a, b) => {
+                                            if (type === 'Tarjeta de Crédito') {
+                                                const dateA = getNextPaymentDate(a.DiaPago);
+                                                const dateB = getNextPaymentDate(b.DiaPago);
+                                                if (dateA && dateB) return dateA - dateB;
+                                                return 0;
+                                            }
+                                            return (a.Nombre || '').localeCompare(b.Nombre || '');
+                                        })
+                                        .map((acc) => {
+                                            const isExpanded = expandedAccount === acc.ID;
+                                            // Para el header, calculamos el saldo TOTAL (sin filtros)
+                                            const headerStats = getAccountDetails(acc, { tipo: 'Todos', estado: 'Todos', mes: 'Todos' });
+                                            // Para el detalle, usamos los filtros activos
+                                            const details = isExpanded ? getAccountDetails(acc) : null;
 
-                                        return (
-                                            <div key={acc.ID} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                                {/* Card Header */}
-                                                <div className="p-6 flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={`p-3 rounded-xl ${acc.Tipo === 'Tarjeta de Crédito' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                                                            {acc.Tipo === 'Tarjeta de Crédito' ? <CreditCard size={24} /> : <Wallet size={24} />}
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="font-bold text-gray-800 text-lg">{acc.Nombre}</h3>
-                                                            {acc.NumeroCuenta && <p className="text-xs text-gray-400 font-mono tracking-wider">{acc.NumeroCuenta}</p>}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-6">
-                                                        <div className="text-right">
-                                                            <p className="text-gray-500 text-xs">
-                                                                {acc.Tipo === 'Tarjeta de Crédito' ? 'Deuda Total' : 'Saldo Real'}
-                                                            </p>
-                                                            <p className={`text-2xl font-bold ${acc.Tipo === 'Tarjeta de Crédito'
-                                                                ? (headerStats.saldoTotal < 0 ? 'text-red-600' : 'text-green-600')
-                                                                : (headerStats.saldoReal < 0 ? 'text-red-600' : 'text-green-600')
-                                                                }`}>
-                                                                {acc.Tipo === 'Tarjeta de Crédito'
-                                                                    ? formatCurrency(Math.abs(headerStats.saldoTotal))
-                                                                    : formatCurrency(headerStats.saldoReal)
-                                                                }
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={() => toggleAccountDetail(acc.ID)}
-                                                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                                                title="Ver detalle"
-                                                            >
-                                                                {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleEdit(acc)}
-                                                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                                            >
-                                                                <Edit size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete(acc.ID, acc.Nombre)}
-                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Expanded Detail */}
-                                                {isExpanded && details && (
-                                                    <div className="border-t border-gray-100 bg-gray-50">
-                                                        {/* Filtros */}
-                                                        <div className="p-4 border-b border-gray-200 bg-white">
-                                                            <div className="flex items-center gap-2 mb-3">
-                                                                <Filter size={16} className="text-gray-500" />
-                                                                <span className="text-sm font-medium text-gray-700">Filtros independientes</span>
+                                            return (
+                                                <div key={acc.ID} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                                    {/* Card Header */}
+                                                    <div className="p-6 flex items-center justify-between">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={`p-3 rounded-xl ${acc.Tipo === 'Tarjeta de Crédito' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                                {acc.Tipo === 'Tarjeta de Crédito' ? <CreditCard size={24} /> : <Wallet size={24} />}
                                                             </div>
-                                                            <div className="flex flex-wrap gap-3">
-                                                                <select
-                                                                    value={filters.mes}
-                                                                    onChange={e => setFilters({ ...filters, mes: e.target.value })}
-                                                                    className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
-                                                                >
-                                                                    <option value="Todos">Todos los meses</option>
-                                                                    {availableMonths.map(m => (
-                                                                        <option key={m} value={m}>{m}</option>
-                                                                    ))}
-                                                                </select>
-                                                                <select
-                                                                    value={filters.tipo}
-                                                                    onChange={e => setFilters({ ...filters, tipo: e.target.value })}
-                                                                    className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
-                                                                >
-                                                                    <option value="Todos">Todos los tipos</option>
-                                                                    <option value="Ingreso">Ingresos</option>
-                                                                    <option value="Gasto">Gastos</option>
-                                                                </select>
-                                                                <select
-                                                                    value={filters.estado}
-                                                                    onChange={e => setFilters({ ...filters, estado: e.target.value })}
-                                                                    className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
-                                                                >
-                                                                    <option value="Todos">Todos los estados</option>
-                                                                    <option value="Validado">Validados</option>
-                                                                    <option value="Pendiente">Pendientes</option>
-                                                                </select>
+                                                            <div>
+                                                                <h3 className="font-bold text-gray-800 text-lg">{acc.Nombre}</h3>
+                                                                <div className="flex flex-col">
+                                                                    {acc.NumeroCuenta && <span className="text-xs text-gray-400 font-mono tracking-wider">{acc.NumeroCuenta}</span>}
+                                                                    {acc.Tipo === 'Tarjeta de Crédito' && acc.DiaPago && (
+                                                                        <span className="text-[10px] text-indigo-500 font-semibold uppercase mt-0.5">
+                                                                            Siguiente Pago: {getNextPaymentDate(acc.DiaPago).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
 
-                                                        {/* Resumen */}
-                                                        <div className="p-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                                            <div className="bg-white p-3 rounded-lg border border-gray-200">
-                                                                <p className="text-xs text-gray-500">Ingresos Validados</p>
-                                                                <p className="text-lg font-bold text-green-600">{formatCurrency(details.ingresosValidados)}</p>
-                                                            </div>
-                                                            <div className="bg-white p-3 rounded-lg border border-gray-200">
-                                                                <p className="text-xs text-gray-500">Gastos Validados</p>
-                                                                <p className="text-lg font-bold text-red-600">{formatCurrency(details.gastosValidados)}</p>
-                                                            </div>
-                                                            <div className="bg-white p-3 rounded-lg border border-gray-200 ring-2 ring-indigo-50 ring-inset">
-                                                                <p className="text-xs text-gray-500">
-                                                                    {acc.Tipo === 'Tarjeta de Crédito' ? 'Deuda Estimada (Todo)' : 'Saldo Real (Validados)'}
+                                                        <div className="flex items-center gap-6">
+                                                            <div className="text-right">
+                                                                <p className="text-gray-500 text-xs">
+                                                                    {acc.Tipo === 'Tarjeta de Crédito' ? 'Deuda Total' : 'Saldo Real'}
                                                                 </p>
-                                                                <p className={`text-lg font-bold ${acc.Tipo === 'Tarjeta de Crédito'
-                                                                    ? (details.saldoTotal < 0 ? 'text-red-600' : 'text-green-600')
-                                                                    : (details.saldoReal < 0 ? 'text-red-600' : 'text-indigo-600')
-                                                                    }`}>
+                                                                <p className={`text-2xl font-bold ${(() => {
+                                                                    const balance = acc.Tipo === 'Tarjeta de Crédito' ? headerStats.saldoTotal : headerStats.saldoReal;
+                                                                    return Math.abs(balance) < 0.01 ? 'text-green-600' : 'text-red-600';
+                                                                })()}`}>
                                                                     {acc.Tipo === 'Tarjeta de Crédito'
-                                                                        ? formatCurrency(Math.abs(details.saldoTotal))
-                                                                        : formatCurrency(details.saldoReal)
+                                                                        ? formatCurrency(Math.abs(headerStats.saldoTotal))
+                                                                        : formatCurrency(headerStats.saldoReal)
                                                                     }
                                                                 </p>
                                                             </div>
-                                                            <div className="bg-white p-3 rounded-lg border border-gray-200">
-                                                                <p className="text-xs text-gray-500">Total Transacciones</p>
-                                                                <p className="text-lg font-bold text-gray-700">{details.transactions.length}</p>
+
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => toggleAccountDetail(acc.ID)}
+                                                                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                                    title="Ver detalle"
+                                                                >
+                                                                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEdit(acc)}
+                                                                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                                >
+                                                                    <Edit size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(acc.ID, acc.Nombre)}
+                                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
                                                             </div>
                                                         </div>
-
-                                                        {/* Lista de transacciones */}
-                                                        <div className="p-4">
-                                                            <h4 className="text-sm font-medium text-gray-700 mb-3">Transacciones ({details.transactions.length})</h4>
-                                                            {details.transactions.length === 0 ? (
-                                                                <p className="text-center text-gray-400 py-4">No hay transacciones con estos filtros</p>
-                                                            ) : (
-                                                                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden max-h-96 overflow-y-auto">
-                                                                    <table className="w-full text-sm">
-                                                                        <thead className="bg-gray-50 sticky top-0">
-                                                                            <tr>
-                                                                                <th className="text-left px-4 py-2 text-gray-600 font-medium">Fecha</th>
-                                                                                <th className="text-left px-4 py-2 text-gray-600 font-medium">Descripción</th>
-                                                                                <th className="text-left px-4 py-2 text-gray-600 font-medium">Categoría</th>
-                                                                                <th className="text-left px-4 py-2 text-gray-600 font-medium">Estado</th>
-                                                                                <th className="text-right px-4 py-2 text-gray-600 font-medium">Monto</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody className="divide-y divide-gray-100">
-                                                                            {details.transactions.map((tx, idx) => (
-                                                                                <tr key={tx.ID || idx} className="hover:bg-gray-50">
-                                                                                    <td className="px-4 py-2 text-gray-600">{formatDate(tx.Fecha)}</td>
-                                                                                    <td className="px-4 py-2 text-gray-800">
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            {tx.Tipo === 'Ingreso' ?
-                                                                                                <ArrowUpCircle size={14} className="text-green-500" /> :
-                                                                                                <ArrowDownCircle size={14} className="text-red-500" />
-                                                                                            }
-                                                                                            {tx.Descripcion || '-'}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                    <td className="px-4 py-2 text-gray-600">{tx.Categoria || '-'}</td>
-                                                                                    <td className="px-4 py-2">
-                                                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tx.Estado === 'Validado'
-                                                                                            ? 'bg-green-100 text-green-700'
-                                                                                            : 'bg-yellow-100 text-yellow-700'
-                                                                                            }`}>
-                                                                                            {tx.Estado || 'Sin estado'}
-                                                                                        </span>
-                                                                                    </td>
-                                                                                    <td className={`px-4 py-2 text-right font-medium ${tx.Tipo === 'Ingreso' ? 'text-green-600' : 'text-red-600'
-                                                                                        }`}>
-                                                                                        {tx.Tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(tx.Monto)}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            ))}
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            )}
-                                                        </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+
+                                                    {/* Expanded Detail */}
+                                                    {isExpanded && details && (
+                                                        <div className="border-t border-gray-100 bg-gray-50">
+                                                            {/* Filtros */}
+                                                            <div className="p-4 border-b border-gray-200 bg-white">
+                                                                <div className="flex items-center gap-2 mb-3">
+                                                                    <Filter size={16} className="text-gray-500" />
+                                                                    <span className="text-sm font-medium text-gray-700">Filtros independientes</span>
+                                                                </div>
+                                                                <div className="flex flex-wrap gap-3">
+                                                                    <select
+                                                                        value={filters.mes}
+                                                                        onChange={e => setFilters({ ...filters, mes: e.target.value })}
+                                                                        className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
+                                                                    >
+                                                                        <option value="Todos">Todos los meses</option>
+                                                                        {availableMonths.map(m => (
+                                                                            <option key={m} value={m}>{m}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                    <select
+                                                                        value={filters.tipo}
+                                                                        onChange={e => setFilters({ ...filters, tipo: e.target.value })}
+                                                                        className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
+                                                                    >
+                                                                        <option value="Todos">Todos los tipos</option>
+                                                                        <option value="Ingreso">Ingresos</option>
+                                                                        <option value="Gasto">Gastos</option>
+                                                                    </select>
+                                                                    <select
+                                                                        value={filters.estado}
+                                                                        onChange={e => setFilters({ ...filters, estado: e.target.value })}
+                                                                        className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
+                                                                    >
+                                                                        <option value="Todos">Todos los estados</option>
+                                                                        <option value="Validado">Validados</option>
+                                                                        <option value="Pendiente">Pendientes</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Resumen */}
+                                                            <div className="p-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                                                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                                                    <p className="text-xs text-gray-500">Ingresos Validados</p>
+                                                                    <p className="text-lg font-bold text-green-600">{formatCurrency(details.ingresosValidados)}</p>
+                                                                </div>
+                                                                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                                                    <p className="text-xs text-gray-500">Gastos Validados</p>
+                                                                    <p className="text-lg font-bold text-red-600">{formatCurrency(details.gastosValidados)}</p>
+                                                                </div>
+                                                                <div className="bg-white p-3 rounded-lg border border-gray-200 ring-2 ring-indigo-50 ring-inset">
+                                                                    <p className="text-xs text-gray-500">
+                                                                        {acc.Tipo === 'Tarjeta de Crédito' ? 'Deuda Estimada (Todo)' : 'Saldo Real (Validados)'}
+                                                                    </p>
+                                                                    <p className={`text-lg font-bold ${acc.Tipo === 'Tarjeta de Crédito'
+                                                                        ? (details.saldoTotal < 0 ? 'text-red-600' : 'text-green-600')
+                                                                        : (details.saldoReal < 0 ? 'text-red-600' : 'text-indigo-600')
+                                                                        }`}>
+                                                                        {acc.Tipo === 'Tarjeta de Crédito'
+                                                                            ? formatCurrency(Math.abs(details.saldoTotal))
+                                                                            : formatCurrency(details.saldoReal)
+                                                                        }
+                                                                    </p>
+                                                                </div>
+                                                                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                                                    <p className="text-xs text-gray-500">Compromisos Futuros</p>
+                                                                    <p className="text-lg font-bold text-amber-600">
+                                                                        {formatCurrency(
+                                                                            recurringRules
+                                                                                .filter(r => r.Tipo === 'Gasto' && r.FechaFin && r.Cuenta === acc.Nombre)
+                                                                                .reduce((sum, r) => sum + getRuleStatus(r, transactions).totalDebt, 0)
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                                                    <p className="text-xs text-gray-500">Total Transacciones</p>
+                                                                    <p className="text-lg font-bold text-gray-700">{details.transactions.length}</p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Lista de transacciones */}
+                                                            <div className="p-4">
+                                                                <h4 className="text-sm font-medium text-gray-700 mb-3">Transacciones ({details.transactions.length})</h4>
+                                                                {details.transactions.length === 0 ? (
+                                                                    <p className="text-center text-gray-400 py-4">No hay transacciones con estos filtros</p>
+                                                                ) : (
+                                                                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden max-h-96 overflow-y-auto">
+                                                                        <table className="w-full text-sm">
+                                                                            <thead className="bg-gray-50 sticky top-0">
+                                                                                <tr>
+                                                                                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Fecha</th>
+                                                                                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Descripción</th>
+                                                                                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Categoría</th>
+                                                                                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Estado</th>
+                                                                                    <th className="text-right px-4 py-2 text-gray-600 font-medium">Monto</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody className="divide-y divide-gray-100">
+                                                                                {details.transactions.map((tx, idx) => (
+                                                                                    <tr key={tx.ID || idx} className="hover:bg-gray-50">
+                                                                                        <td className="px-4 py-2 text-gray-600">{formatDate(tx.Fecha)}</td>
+                                                                                        <td className="px-4 py-2 text-gray-800">
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                {tx.Tipo === 'Ingreso' ?
+                                                                                                    <ArrowUpCircle size={14} className="text-green-500" /> :
+                                                                                                    <ArrowDownCircle size={14} className="text-red-500" />
+                                                                                                }
+                                                                                                {tx.Descripcion || '-'}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td className="px-4 py-2 text-gray-600">{tx.Categoria || '-'}</td>
+                                                                                        <td className="px-4 py-2">
+                                                                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tx.Estado === 'Validado'
+                                                                                                ? 'bg-green-100 text-green-700'
+                                                                                                : 'bg-yellow-100 text-yellow-700'
+                                                                                                }`}>
+                                                                                                {tx.Estado || 'Sin estado'}
+                                                                                            </span>
+                                                                                        </td>
+                                                                                        <td className={`px-4 py-2 text-right font-medium ${tx.Tipo === 'Ingreso' ? 'text-green-600' : 'text-red-600'
+                                                                                            }`}>
+                                                                                            {tx.Tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(tx.Monto)}
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                 </div>
                             </div>
                         );

@@ -48,3 +48,18 @@ export const formatCurrency = (value) => {
         maximumFractionDigits: 2,
     }).format(value);
 };
+
+export const getCategoryAlerts = (transactions) => {
+    const categoryTotals = calculateCategoryTotals(transactions);
+    const totalExpense = categoryTotals.reduce((acc, curr) => acc + curr.value, 0);
+
+    if (totalExpense === 0) return [];
+
+    return categoryTotals
+        .map(cat => ({
+            ...cat,
+            percentage: (cat.value / totalExpense) * 100
+        }))
+        .filter(cat => cat.percentage > 25) // Alerta si una categoría supera el 25%
+        .sort((a, b) => b.percentage - a.percentage);
+};

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatCurrency } from '../utils/financialUtils';
-import { getInstallmentInfo } from '../utils/projectionUtils';
+import { getRuleStatus } from '../utils/projectionUtils';
 import { RefreshCw, Plus, Save, Trash2, Calendar, Loader2, Edit } from 'lucide-react';
 
 const RecurringRulesPage = () => {
@@ -12,7 +12,7 @@ const RecurringRulesPage = () => {
     // New Category State
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
-    const { recurringRules, addRecurringRule, updateRecurringRule, deleteRecurringRule, accounts, settings, loading, addCategory } = useAppContext();
+    const { recurringRules, addRecurringRule, updateRecurringRule, deleteRecurringRule, accounts, transactions, settings, loading, addCategory } = useAppContext();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -376,9 +376,14 @@ const RecurringRulesPage = () => {
                                                 <div className="text-sm text-gray-500 flex flex-col">
                                                     <span>{rule.Frecuencia} • Día {rule.DiaEjecucion}</span>
                                                     {rule.FechaFin && rule.FechaInicio && (
-                                                        <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full w-fit my-1 border border-indigo-100">
-                                                            Cuota {getInstallmentInfo(rule, new Date().toISOString().split('T')[0]) || 'Regla Activa'}
-                                                        </span>
+                                                        <div className="flex flex-col gap-1 mt-1">
+                                                            <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full w-fit border border-indigo-100">
+                                                                Siguiente: {getRuleStatus(rule, transactions).nextInstallment}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-400">
+                                                                Resta: {formatCurrency(getRuleStatus(rule, transactions).totalDebt)}
+                                                            </span>
+                                                        </div>
                                                     )}
                                                     <span className="text-xs text-gray-400">
                                                         {rule.FechaFin ? `Hasta ${rule.FechaFin.split('T')[0]}` : 'Indefinido'}
