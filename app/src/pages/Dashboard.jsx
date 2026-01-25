@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useSmartInsights } from '../hooks/useSmartInsights';
-import { Plus, X, ArrowUpCircle, ArrowDownCircle, Target, Zap, ShieldAlert, TrendingDown } from 'lucide-react';
+import { Plus, X, ArrowUpCircle, ArrowDownCircle, Target, Zap, ShieldAlert, TrendingDown, RefreshCw } from 'lucide-react';
 import { formatCurrency } from '../utils/financialUtils';
 import { generateProjectedTransactions } from '../utils/projectionUtils';
 import { Link } from 'react-router-dom';
@@ -231,6 +231,17 @@ const Dashboard = () => {
                         })()}
                     </select>
 
+                    <button
+                        onClick={() => {
+                            setSelectedMonth(new Date().toISOString().slice(0, 7));
+                            setSelectedAccount('Todas');
+                        }}
+                        className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Limpiar Filtros"
+                    >
+                        <RefreshCw size={18} />
+                    </button>
+
                     <div className="h-8 w-px bg-gray-200 mx-1 hidden md:block"></div>
 
                     <button
@@ -399,10 +410,11 @@ const Dashboard = () => {
 
                     {/* FILA 2: Flujo de Caja Proyectado (100%) */}
                     <ProjectedCashFlow
-                        transactions={stats.filteredTransactions}
+                        transactions={transactions}
                         recurringRules={recurringRules}
                         currentBalance={stats.balanceReal}
                         selectedAccount={selectedAccount}
+                        startMonth={selectedMonth}
                     />
 
                     {/* FILA 3: Categorías (100%) */}

@@ -6,19 +6,23 @@ import {
 import { generateProjectedTransactions } from '../../utils/projectionUtils';
 import { formatCurrency } from '../../utils/financialUtils';
 
-const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, selectedAccount = 'Todas' }) => {
+const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, selectedAccount = 'Todas', startMonth }) => {
     const [monthsToProject, setMonthsToProject] = React.useState(12);
 
     const data = useMemo(() => {
-        if (!recurringRules || recurringRules.length === 0) return [];
+        // if (!recurringRules || recurringRules.length === 0) return []; // Eliminado para permitir transacciones manuales futuras
 
         const result = [];
-        const today = new Date();
+        // Si hay mes seleccionado, empezamos desde el día 1 de ese mes. Si no, desde hoy.
+        const startDate = startMonth ? new Date(startMonth + '-01T00:00:00') : new Date();
 
         // Proyectar X meses
         for (let i = 0; i < monthsToProject; i++) {
-            const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-            const yearMonth = d.toISOString().slice(0, 7); // YYYY-MM
+            const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+            // Construcción manual "YYYY-MM" para evitar problemas de timezone UTC
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const yearMonth = `${year}-${month}`;
             const monthName = d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
 
             // 1. Obtener transacciones REALES ya existentes para ese mes y cuenta
