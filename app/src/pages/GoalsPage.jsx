@@ -15,13 +15,17 @@ const GoalsPage = () => {
         name: '',
         targetAmount: '',
         deadline: '',
-        color: '#6366f1' // Indigo-500 default
+        targetAmount: '',
+        deadline: '',
+        color: '#6366f1', // Indigo-500 default
+        inspiration: '' // [NEW]
     });
 
     const resetForm = () => {
         setShowForm(false);
         setEditingGoal(null);
-        setFormData({ name: '', targetAmount: '', deadline: '', color: '#6366f1' });
+        setEditingGoal(null);
+        setFormData({ name: '', targetAmount: '', deadline: '', color: '#6366f1', inspiration: '' });
     };
 
     const handleEdit = (goal) => {
@@ -30,7 +34,9 @@ const GoalsPage = () => {
             name: goal.Nombre,
             targetAmount: goal.MontoObjetivo,
             deadline: goal.FechaLimite ? goal.FechaLimite.split('T')[0] : '',
-            color: goal.Color || '#6366f1'
+            deadline: goal.FechaLimite ? goal.FechaLimite.split('T')[0] : '',
+            color: goal.Color || '#6366f1',
+            inspiration: goal.Inspiracion || '' // [NEW]
         });
         setShowForm(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -152,6 +158,18 @@ const GoalsPage = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Nueva Sección Inspiración */}
+                    <div className="mt-4">
+                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Tu Inspiración (El PORQUÉ)</label>
+                        <textarea
+                            value={formData.inspiration}
+                            onChange={e => setFormData({ ...formData, inspiration: e.target.value })}
+                            placeholder="Ej: Quiero llevar a mis hijos a conocer la Torre Eiffel..."
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm min-h-[80px]"
+                        />
+                    </div>
+
                     <div className="mt-6 flex justify-end gap-3">
                         {editingGoal && (
                             <button
@@ -175,7 +193,9 @@ const GoalsPage = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {(goals || []).map((goal) => {
-                    const progress = Math.min(100, (goal.MontoAhorrado / goal.MontoObjetivo) * 100);
+                    const saved = parseFloat(goal.MontoAhorrado) || 0; // [FIX] NaN Protection
+                    const target = parseFloat(goal.MontoObjetivo) || 1;
+                    const progress = Math.min(100, (saved / target) * 100);
                     const isSaving = savingAmount.id === goal.ID;
 
                     return (
@@ -207,6 +227,13 @@ const GoalsPage = () => {
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
+
+                                {goal.Inspiracion && (
+                                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 italic text-amber-800 text-sm flex gap-2">
+                                        <span className="font-black text-amber-400 text-lg">“</span>
+                                        {goal.Inspiracion}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Card Body */}
@@ -214,7 +241,7 @@ const GoalsPage = () => {
                                 <div className="flex justify-between items-end">
                                     <div className="space-y-1">
                                         <p className="text-xs text-gray-400 uppercase font-bold tracking-tight">HAS AHORRADO</p>
-                                        <p className="text-2xl font-black text-gray-900">{formatCurrency(goal.MontoAhorrado)}</p>
+                                        <p className="text-2xl font-black text-gray-900">{formatCurrency(parseFloat(goal.MontoAhorrado) || 0)}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xs text-gray-400 uppercase font-bold tracking-tight">OBJETIVO</p>

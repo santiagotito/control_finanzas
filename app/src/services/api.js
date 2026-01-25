@@ -4,6 +4,26 @@ import { API_URL } from '../config';
 // Servicio para comunicar con Google Sheets
 const api = {
     // Obtener todos los datos
+    login: async (email, password) => {
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'login');
+            // Enviar campos planos para que GAS los lea en e.parameter
+            formData.append('email', email);
+            formData.append('password', password);
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error("Login failed:", error);
+            return { status: 'error', message: 'Error de red' };
+        }
+    },
+
     getData: async () => {
         try {
             if (API_URL.includes("TU_URL_AQUI")) {
@@ -34,8 +54,9 @@ const api = {
             Monto: transaction.amount,
             Cuenta: transaction.account,
             Descripcion: transaction.description,
-            MesAfectacion: transaction.MesAfectacion, // [NEW]
-            Estado: transaction.Estado // [NEW] Optional status override
+            MesAfectacion: transaction.MesAfectacion,
+            Estado: transaction.Estado,
+            MetaID: transaction.MetaID // [NEW] Link to Goal
         };
         try {
             const response = await axios.post(API_URL, JSON.stringify({
@@ -64,7 +85,8 @@ const api = {
             Cuenta: transaction.account,
             Descripcion: transaction.description,
             MesAfectacion: transaction.MesAfectacion, // [NEW]
-            Estado: transaction.Estado
+            Estado: transaction.Estado,
+            MetaID: transaction.MetaID // [NEW]
         };
         try {
             const response = await axios.post(API_URL, JSON.stringify({

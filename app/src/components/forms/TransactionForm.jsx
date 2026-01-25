@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { Save, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Save, Loader2, Plus, Trash2, AlertTriangle } from 'lucide-react';
 
 const TransactionForm = ({ onSuccess, initialData = null }) => {
-    const { addTransaction, updateTransaction, accounts, settings, addCategory } = useAppContext();
+    const { addTransaction, updateTransaction, accounts, settings, addCategory, goals } = useAppContext();
     const [loading, setLoading] = useState(false);
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
@@ -21,8 +21,11 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
         monthEffect: new Date().toISOString().slice(0, 7),
         hasCommission: false,
         commissionAmount: '',
+        hasCommission: false,
+        commissionAmount: '',
         hasTax: false,
-        taxAmount: ''
+        taxAmount: '',
+        goalId: '' // [NEW] Link to Goal
     };
 
     const [formData, setFormData] = useState(defaultState);
@@ -47,8 +50,11 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                 Estado: 'Validado',
                 hasCommission: false,
                 commissionAmount: '',
+                hasCommission: false,
+                commissionAmount: '',
                 hasTax: false,
-                taxAmount: ''
+                taxAmount: '',
+                goalId: initialData.MetaID || '' // [NEW] Load Goal Link
             });
         }
     }, [initialData]);
@@ -93,14 +99,16 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                     account: txData.account,
                     description: txData.description,
                     MesAfectacion: txData.monthEffect,
-                    Estado: txData.Estado
+                    Estado: txData.Estado,
+                    MetaID: txData.goalId // [NEW]
                 });
             } else {
                 // CREATE: New or Confirming Projection
                 console.log("CREATING Transaction");
                 success = await addTransaction({
                     ...txData,
-                    MesAfectacion: txData.monthEffect
+                    MesAfectacion: txData.monthEffect,
+                    MetaID: txData.goalId // [NEW]
                 });
 
                 // Lógica especial para Pago de Tarjetas
@@ -449,6 +457,47 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                         />
                         <p className="text-[10px] text-indigo-400 mt-1">Este abono reducirá la deuda de este mes en la tarjeta.</p>
                     </div>
+                </div>
+            )}
+
+            {/* ALERTA DE GASTO EN AHORROS */}
+            {formData.type === 'Gasto' && (
+                (() => {
+                    const acc = accounts.find(a => a.Nombre === formData.account);
+                    const isSavings = acc && (acc.Tipo === 'Inversión' || acc.Nombre.toLowerCase().includes('ahorro'));
+
+                    if (isSavings) return (
+                        <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 flex items-start gap-3 animate-bounce-subtle">
+                            <AlertTriangle className="text-orange-500 shrink-0" size={20} />
+                            <div>
+                                <p className="text-xs font-bold text-orange-700">¡Cuidado! Estás gastando tus ahorros.</p>
+                                <p className="text-[10px] text-orange-600 leading-tight mt-1">
+                                    Has seleccionado una cuenta de ahorro/inversión. ¿Seguro que quieres usar este dinero para un gasto corriente?
+                                </p>
+                            </div>
+                        </div>
+                    );
+                    return null;
+                })()
+            )}
+
+            {/* SELECCIÓN DE META (SOLO SI ES AHORRO) */}
+            {formData.category && formData.category.toLowerCase().includes('ahorro') && (
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 space-y-2 animate-fadeIn">
+                    <label className="block text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                        ¿Este movimiento suma a una meta? (Opcional)
+                    </label>
+                    <select
+                        name="goalId"
+                        value={formData.goalId}
+                        onChange={handleChange}
+                        className="w-full px-3 py-1.5 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-sm"
+                    >
+                        <option value="">No, es un ahorro general</option>
+                        {goals && goals.map(g => (
+                            <option key={g.ID} value={g.ID}>🎯 Abonar a: {g.Nombre}</option>
+                        ))}
+                    </select>
                 </div>
             )}
 

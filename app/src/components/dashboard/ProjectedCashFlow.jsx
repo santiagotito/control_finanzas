@@ -103,7 +103,7 @@ const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, s
                 </div>
             </div>
 
-            <div className="w-full h-72">
+            <div className="w-full h-72" style={{ minHeight: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
                         <defs>

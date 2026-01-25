@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, HandCoins, CreditCard, PiggyBank, TrendingUp, Menu, X, Bell, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, HandCoins, CreditCard, PiggyBank, TrendingUp, Menu, X, Bell, RefreshCw, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const MainLayout = ({ children }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
+    const { logout } = useAuth();
 
     const navigation = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -30,7 +32,7 @@ const MainLayout = ({ children }) => {
     return (
         <div className="min-h-screen bg-gray-100 flex">
             {/* Sidebar Desktop */}
-            <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
+            <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 sticky top-0 h-screen">
                 <div className="p-6">
                     <h1 className="text-2xl font-bold text-indigo-600 flex items-center gap-2">
                         <span className="text-3xl">🪙</span> Finanzas
@@ -55,6 +57,15 @@ const MainLayout = ({ children }) => {
                         );
                     })}
                 </nav>
+                <div className="p-4 border-t border-gray-100 mt-auto bg-gray-50">
+                    <button
+                        onClick={logout}
+                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-gray-800 text-white hover:bg-gray-900 w-full transition-all shadow-lg hover:shadow-xl"
+                    >
+                        <LogOut size={18} />
+                        Cerrar Sesión
+                    </button>
+                </div>
             </aside>
 
             {/* Main Content */}
@@ -93,6 +104,15 @@ const MainLayout = ({ children }) => {
                                 );
                             })}
                         </nav>
+                        <div className="p-4 border-t border-gray-100">
+                            <button
+                                onClick={() => { closeMenu(); logout(); }}
+                                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 w-full transition-colors"
+                            >
+                                <LogOut size={20} />
+                                Cerrar Sesión
+                            </button>
+                        </div>
                     </div>
                 )}
 
