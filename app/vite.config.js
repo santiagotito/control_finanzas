@@ -5,5 +5,5 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   // Ajusta esto al nombre de tu repositorio en GitHub para el despliegue
-  base: '/finanzas_santi/',
+  base: '/control_finanzas/',
 })
