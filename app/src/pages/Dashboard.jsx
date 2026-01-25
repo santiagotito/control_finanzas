@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useSmartInsights } from '../hooks/useSmartInsights';
-import { Plus, X, ArrowUpCircle, ArrowDownCircle, Target, Zap, ShieldAlert, TrendingDown, RefreshCw } from 'lucide-react';
+import { Plus, X, ArrowUpCircle, ArrowDownCircle, Target, Zap, ShieldAlert, TrendingDown, RefreshCw, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '../utils/financialUtils';
 import { generateProjectedTransactions } from '../utils/projectionUtils';
 import { Link } from 'react-router-dom';
@@ -256,6 +256,62 @@ const Dashboard = () => {
                     </Link>
                 </div>
             </header>
+
+            {/* SECCIÓN KPI: Tarjetas de Resumen Rápido (Restauradas) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div
+                    onClick={() => setSelectedDrillDown({
+                        title: 'Detalle de Ingresos',
+                        transactions: stats.filteredTransactions.filter(t => t.Tipo === 'Ingreso')
+                    })}
+                    className="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 flex items-center justify-between transition-transform hover:-translate-y-1 duration-300 cursor-pointer"
+                >
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ingresos</p>
+                        <p className="text-xl font-black text-emerald-600 mt-1">{formatCurrency(stats.incomeReal)}</p>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-emerald-600/70 bg-emerald-50 w-fit px-1.5 py-0.5 rounded-md">
+                            <span>Pend: {formatCurrency(stats.pendingIncome)}</span>
+                        </div>
+                    </div>
+                    <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 shadow-sm">
+                        <ArrowUpCircle size={28} />
+                    </div>
+                </div>
+
+                <div
+                    onClick={() => setSelectedDrillDown({
+                        title: 'Detalle de Gastos',
+                        transactions: stats.filteredTransactions.filter(t => t.Tipo === 'Gasto')
+                    })}
+                    className="bg-white p-4 rounded-2xl shadow-sm border border-red-100 flex items-center justify-between transition-transform hover:-translate-y-1 duration-300 cursor-pointer"
+                >
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gastos</p>
+                        <p className="text-xl font-black text-red-600 mt-1">{formatCurrency(stats.expenseReal)}</p>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-red-600/70 bg-red-50 w-fit px-1.5 py-0.5 rounded-md">
+                            <span>Pend: {formatCurrency(stats.pendingExpense)}</span>
+                        </div>
+                    </div>
+                    <div className="p-3 bg-red-50 rounded-2xl text-red-600 shadow-sm">
+                        <ArrowDownCircle size={28} />
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-indigo-100 flex items-center justify-between transition-transform hover:-translate-y-1 duration-300">
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Balance Total</p>
+                        <p className={`text-xl font-black mt-1 ${stats.balanceReal >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
+                            {formatCurrency(stats.balanceReal)}
+                        </p>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-indigo-600/70 bg-indigo-50 w-fit px-1.5 py-0.5 rounded-md">
+                            <span>Proy: {formatCurrency(stats.balanceReal + stats.pendingIncome - stats.pendingExpense)}</span>
+                        </div>
+                    </div>
+                    <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600 shadow-sm">
+                        <TrendingUp size={28} />
+                    </div>
+                </div>
+            </div>
 
             {/* SECCIÓN 1: ESTRATEGIA DEL DÍA (HEADER) */}
             <div className={`rounded-3xl p-6 text-white shadow-xl relative overflow-hidden transition-all duration-500 ${smartInsights.length > 0 && smartInsights[0].type === 'danger' ? 'bg-gradient-to-br from-red-600 to-red-800' :

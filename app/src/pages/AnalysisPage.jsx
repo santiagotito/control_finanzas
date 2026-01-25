@@ -1,11 +1,12 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatCurrency, getFinancialKPIs } from '../utils/financialUtils';
-import { TrendingUp, AlertTriangle, ShieldCheck, Activity, Target, BrainCircuit, Wallet, PiggyBank } from 'lucide-react';
+import { TrendingUp, AlertTriangle, ShieldCheck, Activity, Target, BrainCircuit, Wallet, PiggyBank, X } from 'lucide-react';
 import { getRuleStatus } from '../utils/projectionUtils';
 
 const AnalysisPage = () => {
     const { transactions, accounts, recurringRules, loading } = useAppContext();
+    const [selectedDrillDown, setSelectedDrillDown] = React.useState(null);
 
     if (loading) return (
         <div className="flex justify-center items-center h-64">
@@ -127,7 +128,32 @@ const AnalysisPage = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div
+                        onClick={() => setSelectedDrillDown({
+                            title: 'Detalle de Deuda Total',
+                            transactions: [], // Not based on transactions but rules
+                            customContent: (
+                                <div className="space-y-4">
+                                    <p className="text-sm text-gray-500 mb-2">Compromisos recurrentes pendientes:</p>
+                                    {recurringRules
+                                        .filter(r => r.Tipo === 'Gasto' && r.FechaFin && getRuleStatus(r, transactions).totalDebt > 0)
+                                        .map((r, idx) => {
+                                            const status = getRuleStatus(r, transactions);
+                                            return (
+                                                <div key={idx} className="flex justify-between items-center border-b border-gray-100 pb-2 last:border-0">
+                                                    <div>
+                                                        <p className="font-bold text-gray-800">{r.Nombre}</p>
+                                                        <p className="text-xs text-gray-500">{status.remaining} cuotas restantes</p>
+                                                    </div>
+                                                    <span className="font-bold text-red-600 font-mono">{formatCurrency(status.totalDebt)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            )
+                        })}
+                        className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-red-50 text-red-600 rounded-xl"><Wallet size={24} /></div>
                             <div>
@@ -226,6 +252,28 @@ const AnalysisPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Drill Down Modal */}
+            {selectedDrillDown && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col animate-scaleIn">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800">{selectedDrillDown.title}</h3>
+                            </div>
+                            <button onClick={() => setSelectedDrillDown(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <X size={24} className="text-gray-400" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                            {selectedDrillDown.customContent}
+                        </div>
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end">
+                            <button onClick={() => setSelectedDrillDown(null)} className="px-5 py-2 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-colors shadow-lg">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
