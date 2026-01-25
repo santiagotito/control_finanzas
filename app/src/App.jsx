@@ -16,7 +16,7 @@ import { Navigate } from 'react-router-dom';
 
 function App() {
   return (
-    <Router>
+    <Router basename="/finanzas_santi">
       <AuthProvider>
         <AppProvider>
           <Routes>
