@@ -9,62 +9,71 @@ import GoalsPage from './pages/GoalsPage';
 import AnalysisPage from './pages/AnalysisPage';
 import PaymentAlertsPage from './pages/PaymentAlertsPage';
 import RecurringRulesPage from './pages/RecurringRulesPage';
-import SettingsPage from './pages/SettingsPage'; // Added SettingsPage
+import SettingsPage from './pages/SettingsPage';
+import MonthlyObjectivesPage from './pages/MonthlyObjectivesPage'; // Added
 import LoginPage from './pages/LoginPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { HabitProvider } from './context/HabitContext'; // Added
 import { Navigate } from 'react-router-dom';
 
 function App() {
   return (
-    <Router basename="/finanzas_santi">
+    <Router basename="/control_finanzas">
       <AuthProvider>
         <AppProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
+          <HabitProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* Rutas Protegidas */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <MainLayout><Dashboard /></MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/transactions" element={
-              <ProtectedRoute>
-                <MainLayout><TransactionsPage /></MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/accounts" element={
-              <ProtectedRoute>
-                <MainLayout><AccountsPage /></MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/goals" element={
-              <ProtectedRoute>
-                <MainLayout><GoalsPage /></MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/analysis" element={
-              <ProtectedRoute>
-                <MainLayout><AnalysisPage /></MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/recurring" element={
-              <ProtectedRoute>
-                <MainLayout><RecurringRulesPage /></MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/alerts" element={
-              <ProtectedRoute>
-                <MainLayout><PaymentAlertsPage /></MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <MainLayout><SettingsPage /></MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              {/* Rutas Protegidas */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <MainLayout><Dashboard /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/transactions" element={
+                <ProtectedRoute>
+                  <MainLayout><TransactionsPage /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/accounts" element={
+                <ProtectedRoute>
+                  <MainLayout><AccountsPage /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/goals" element={
+                <ProtectedRoute>
+                  <MainLayout><GoalsPage /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/analysis" element={
+                <ProtectedRoute>
+                  <MainLayout><AnalysisPage /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/recurring" element={
+                <ProtectedRoute>
+                  <MainLayout><RecurringRulesPage /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/alerts" element={
+                <ProtectedRoute>
+                  <MainLayout><PaymentAlertsPage /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/habits" element={
+                <ProtectedRoute>
+                  <MainLayout><MonthlyObjectivesPage /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <MainLayout><SettingsPage /></MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </HabitProvider>
         </AppProvider>
       </AuthProvider>
     </Router>

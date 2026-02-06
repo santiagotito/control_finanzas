@@ -9,13 +9,27 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes bounceSubtle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
 .animate-fadeIn {
@@ -24,4 +38,9 @@
 
 .animate-bounce-subtle {
   animation: bounceSubtle 2s infinite ease-in-out;
+}
+
+/* Added alias for kebab-case used in some components */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
 }

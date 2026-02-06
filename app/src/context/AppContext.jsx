@@ -9,6 +9,13 @@ export const AppProvider = ({ children }) => {
     const [goals, setGoals] = useState([]);
     const [recurringRules, setRecurringRules] = useState([]);
     const [settings, setSettings] = useState([]);
+
+    // Nuevos estados para hábitos
+    const [habits, setHabits] = useState([]);
+    const [habitsLog, setHabitsLog] = useState([]);
+    const [gratitudeEntries, setGratitudeEntries] = useState([]);
+    const [quotesEntries, setQuotesEntries] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -28,6 +35,12 @@ export const AppProvider = ({ children }) => {
                 setGoals(data.goals || []);
                 setRecurringRules(data.recurring || []);
                 setSettings(data.settings || []);
+
+                // Mapear datos nuevos si vienen del GAS
+                setHabits(data.habits || []);
+                setHabitsLog(data.habitsLog || []);
+                setGratitudeEntries(data.gratitude || []);
+                setQuotesEntries(data.quotes || []);
             } else if (result === null) {
                 setError("API_URL_MISSING");
             }
@@ -49,6 +62,10 @@ export const AppProvider = ({ children }) => {
                 setGoals(data.goals || []);
                 setRecurringRules(data.recurring || []);
                 setSettings(data.settings || []);
+                setHabits(data.habits || []);
+                setHabitsLog(data.habitsLog || []);
+                setGratitudeEntries(data.gratitude || []);
+                setQuotesEntries(data.quotes || []);
                 setLoading(false); // Mostrar datos cacheados inmediatamente
                 loadData(true); // Recargar en segundo plano
             } catch (e) {
@@ -201,7 +218,7 @@ export const AppProvider = ({ children }) => {
             settings,
             loading,
             error,
-            refreshData: () => loadData(true), // Al refrescar manual (post-acción), usamos background para no bloquear UI (o false si queremos bloquear) -> Mejor true para UX fluida, el loading de UI local se encarga.
+            refreshData: () => loadData(true),
             addTransaction,
             updateTransaction,
             deleteTransaction,
@@ -216,7 +233,11 @@ export const AppProvider = ({ children }) => {
             addRecurringRule,
             updateRecurringRule,
             deleteRecurringRule,
-            addCategory
+            addCategory,
+            habits,
+            habitsLog,
+            gratitudeEntries,
+            quotesEntries
         }}>
             {children}
         </AppContext.Provider>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, HandCoins, CreditCard, PiggyBank, TrendingUp, Menu, X, Bell, RefreshCw, LogOut } from 'lucide-react';
+import { LayoutDashboard, HandCoins, CreditCard, PiggyBank, TrendingUp, Menu, X, Bell, RefreshCw, LogOut, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const MainLayout = ({ children }) => {
@@ -15,6 +15,7 @@ const MainLayout = ({ children }) => {
         { name: 'Metas', path: '/goals', icon: PiggyBank },
         { name: 'Deudas y Pagos', path: '/recurring', icon: RefreshCw },
         { name: 'Análisis', path: '/analysis', icon: TrendingUp },
+        { name: 'Hábitos', path: '/habits', icon: Sparkles },
         { name: 'Alertas', path: '/alerts', icon: Bell },
         // Mejor creo una página separada si es importante.
         // El usuario pidió "Alertas de Pago". 

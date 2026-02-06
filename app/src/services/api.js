@@ -351,6 +351,175 @@ const api = {
             console.error("Error al agregar configuración:", error);
             throw error;
         }
+    },
+
+    // --- HÁBITOS, GRATITUD Y FRASES ---
+
+    addHabit: async (habit) => {
+        const payload = {
+            Nombre: habit.name,
+            Frecuencia: habit.frequency,
+            Color: habit.color,
+            FechaCreado: habit.createdAt
+        };
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'addHabit',
+                payload: payload
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al agregar hábito:", error);
+            throw error;
+        }
+    },
+
+    updateHabit: async (habit) => {
+        const payload = {
+            ID: habit.id,
+            Nombre: habit.name,
+            Frecuencia: habit.frequency,
+            Color: habit.color
+        };
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'updateHabit',
+                payload: payload
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al actualizar hábito:", error);
+            throw error;
+        }
+    },
+
+    // Marcar hábito como completado
+    logHabit: async (idHabit, date) => {
+        const payload = {
+            ID_Habito: idHabit,
+            Fecha: date
+        };
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'logHabit',
+                payload: payload
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al registrar hábito:", error);
+            throw error;
+        }
+    },
+
+    deleteHabit: async (id) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'deleteHabit',
+                payload: { ID: id }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al eliminar hábito:", error);
+            throw error;
+        }
+    },
+
+    addGratitude: async (text) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'addGratitude',
+                payload: { Texto: text, Fecha: new Date().toISOString() }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al agregar gratitud:", error);
+            throw error;
+        }
+    },
+
+    updateGratitude: async (id, text) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'updateGratitude',
+                payload: { ID: id, Texto: text }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al actualizar gratitud:", error);
+            throw error;
+        }
+    },
+
+    deleteGratitude: async (id) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'deleteGratitude',
+                payload: { ID: id }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al eliminar gratitud:", error);
+            throw error;
+        }
+    },
+
+    addQuote: async (text, author) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'addQuote',
+                payload: { Texto: text, Autor: author, Fecha: new Date().toISOString() }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al agregar frase:", error);
+            throw error;
+        }
+    },
+
+    updateQuote: async (id, text, author) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'updateQuote',
+                payload: { ID: id, Texto: text, Autor: author }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al actualizar frase:", error);
+            throw error;
+        }
+    },
+
+    deleteQuote: async (id) => {
+        try {
+            const response = await axios.post(API_URL, JSON.stringify({
+                action: 'deleteQuote',
+                payload: { ID: id }
+            }), {
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error al eliminar frase:", error);
+            throw error;
+        }
     }
 };
 

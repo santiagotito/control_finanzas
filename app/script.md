@@ -1,6 +1,6 @@
 /**
  * ------------------------------------------------------------------
- * BACKEND FINANCIERO UNIFICADO v5
+ * BACKEND FINANCIERO UNIFICADO v4
  * ------------------------------------------------------------------
  */
 
@@ -21,7 +21,6 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Control Financiero')
     .addItem('Inicializar/Actualizar Hojas', 'setupSheets')
-    .addItem('Forzar Actualización de Saldos', 'recalcBalances')
     .addToUi();
 }
 
@@ -54,7 +53,7 @@ function setupSheets() {
     'ID', 'Nombre', 'Tipo', 'Monto', 'Categoria', 'Cuenta', 'Frecuencia', 'DiaEjecucion', 'FechaInicio', 'FechaFin', 'UltimaEjecucion'
   ]);
   
-  // 6. Hábitos & Crecimiento
+  // 6. Nuevos Módulos
   ensureSheet(ss, SHEET_NAMES.HABITS, ['ID', 'Nombre', 'Frecuencia', 'Color', 'FechaCreado', 'Estado']);
   ensureSheet(ss, SHEET_NAMES.HABITS_LOG, ['ID_Habito', 'Fecha', 'Completado']);
   ensureSheet(ss, SHEET_NAMES.GRATITUDE, ['ID', 'Fecha', 'Texto']);
@@ -107,66 +106,52 @@ function doGet(e) {
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  if (!lock.tryLock(10000)) return responseJSON({ status: 'error', message: 'Servidor ocupado' });
+  if (!lock.tryLock(10000)) return responseJSON({ status: 'error', message: 'Server busy' });
 
   try {
     let action = e.parameter.action;
     let payload = {};
 
+    // Parse JSON body if available
     if (e.postData && e.postData.contents) {
       const json = JSON.parse(e.postData.contents);
       if (json.action) action = json.action;
       if (json.payload) payload = json.payload;
     }
 
-    if (!action) return responseJSON({ status: 'error', message: 'No se especificó acción' });
+    if (!action) return responseJSON({ status: 'error', message: 'No action specified' });
 
     // ROUTING
     switch (action) {
       case 'login': return handleLogin(payload.email, payload.password);
       
-      // Transacciones
+      // Core Data
       case 'addTransaction': return handleAddTransaction(payload);
-      case 'updateTransaction': return handleUpdateTransaction(payload);
-      case 'deleteTransaction': return handleDeleteTransaction(payload);
+      case 'updateTransaction': return updateRow(SHEET_NAMES.TRANSACTIONS, payload.ID, payload);
+      case 'deleteTransaction': return deleteRow(SHEET_NAMES.TRANSACTIONS, payload.ID);
       
-      // Cuentas
       case 'addAccount': return handleAddAccount(payload);
-      case 'updateAccount': return handleUpdateAccount(payload);
+      case 'updateAccount': return updateRow(SHEET_NAMES.ACCOUNTS, payload.ID, payload);
       case 'deleteAccount': return deleteRow(SHEET_NAMES.ACCOUNTS, payload.ID);
       
-      // Metas
       case 'addGoal': return createRow(SHEET_NAMES.GOALS, payload);
       case 'updateGoal': return handleUpdateGoal(payload);
       case 'deleteGoal': return deleteRow(SHEET_NAMES.GOALS, payload.ID);
       
-      // Recurrentes
       case 'addRecurringRule': return createRow(SHEET_NAMES.RECURRING, payload);
       case 'updateRecurringRule': return updateRow(SHEET_NAMES.RECURRING, payload.ID, payload);
       case 'deleteRecurringRule': return deleteRow(SHEET_NAMES.RECURRING, payload.ID);
 
-      // Settings
       case 'addSetting': return createRow(SHEET_NAMES.SETTINGS, payload);
 
-      // Hábitos & Crecimiento
+      // Habits & Growth
       case 'addHabit': return createRow(SHEET_NAMES.HABITS, payload);
       case 'updateHabit': return updateRow(SHEET_NAMES.HABITS, payload.ID, payload);
       case 'deleteHabit': return deleteRow(SHEET_NAMES.HABITS, payload.ID);
-      case 'logHabit': return createRowWithCheck(SHEET_NAMES.HABITS_LOG, payload); 
+      case 'logHabit': return createRow(SHEET_NAMES.HABITS_LOG, payload); 
 
-      // Gratitud CRUD [NUEVO]
-      case 'addGratitude': 
-        payload.Fecha = payload.Fecha || new Date().toISOString();
-        return createRow(SHEET_NAMES.GRATITUDE, payload);
-      case 'updateGratitude': return updateRow(SHEET_NAMES.GRATITUDE, payload.ID, payload);
-      case 'deleteGratitude': return deleteRow(SHEET_NAMES.GRATITUDE, payload.ID);
-
-      // Frases CRUD [NUEVO]
-      case 'addQuote': 
-        payload.Fecha = payload.Fecha || new Date().toISOString();
-        return createRow(SHEET_NAMES.QUOTES, payload);
-      case 'updateQuote': return updateRow(SHEET_NAMES.QUOTES, payload.ID, payload);
-      case 'deleteQuote': return deleteRow(SHEET_NAMES.QUOTES, payload.ID);
+      case 'addGratitude': return createRow(SHEET_NAMES.GRATITUDE, payload);
+      case 'addQuote': return createRow(SHEET_NAMES.QUOTES, payload);
 
       default: return responseJSON({ status: 'error', message: 'Acción no reconocida: ' + action });
     }
@@ -178,8 +163,26 @@ function doPost(e) {
 }
 
 // ------------------------------------------------------------------
-// LÓGICA ESPECÍFICA
+// LÓGICA CORE
 // ------------------------------------------------------------------
+
+function getData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  return responseJSON({
+    status: 'success',
+    data: {
+      transactions: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.TRANSACTIONS)),
+      accounts: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.ACCOUNTS)),
+      goals: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.GOALS)),
+      settings: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.SETTINGS)),
+      recurring: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.RECURRING)),
+      habits: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.HABITS)),
+      habitsLog: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.HABITS_LOG)),
+      gratitude: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.GRATITUDE)),
+      quotes: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.QUOTES))
+    }
+  });
+}
 
 function handleLogin(email, password) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -193,44 +196,6 @@ function handleLogin(email, password) {
     });
   }
   return responseJSON({ status: "error", message: "Credenciales incorrectas" });
-}
-
-function getData() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const transactions = readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.TRANSACTIONS));
-  const accounts = readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.ACCOUNTS));
-
-  // Recalcular saldo real de cuentas
-  const accountsWithRealBalance = accounts.map(acc => {
-    let balance = parseFloat(acc['SaldoInicial'] || 0);
-    const accName = String(acc['Nombre'] || '').trim().toUpperCase();
-
-    transactions.forEach(tx => {
-      const txAcc = String(tx['Cuenta'] || '').trim().toUpperCase();
-      if (txAcc === accName && tx['Estado'] === 'Validado') {
-        const amount = parseFloat(tx['Monto'] || 0);
-        if (tx['Tipo'] === 'Ingreso') balance += amount;
-        else balance -= amount;
-      }
-    });
-
-    return { ...acc, SaldoActual: balance };
-  });
-
-  return responseJSON({
-    status: 'success',
-    data: {
-      transactions: transactions,
-      accounts: accountsWithRealBalance,
-      goals: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.GOALS)),
-      settings: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.SETTINGS)),
-      recurring: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.RECURRING)),
-      habits: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.HABITS)),
-      habitsLog: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.HABITS_LOG)),
-      gratitude: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.GRATITUDE)),
-      quotes: readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.QUOTES))
-    }
-  });
 }
 
 function handleAddTransaction(data) {
@@ -252,16 +217,9 @@ function handleAddTransaction(data) {
   data['FechaCreacion'] = new Date().toISOString();
   data['Estado'] = status;
   
-  return createRow(SHEET_NAMES.TRANSACTIONS, data);
-}
-
-function handleUpdateTransaction(payload) {
-  // Lógica de balance si cambia estado se omite por simplicidad en v5 (recalc en getData)
-  return updateRow(SHEET_NAMES.TRANSACTIONS, payload.ID, payload);
-}
-
-function handleDeleteTransaction(payload) {
-  return deleteRow(SHEET_NAMES.TRANSACTIONS, payload.ID);
+  const response = createRow(SHEET_NAMES.TRANSACTIONS, data);
+  updateAccountBalance(data['Cuenta'], data['Monto'], data['Tipo']);
+  return response;
 }
 
 function handleAddAccount(data) {
@@ -270,17 +228,10 @@ function handleAddAccount(data) {
   return createRow(SHEET_NAMES.ACCOUNTS, data);
 }
 
-function handleUpdateAccount(data) {
-    const id = data['ID'];
-    if (data['Nombre']) data['Nombre'] = data['Nombre'].toUpperCase();
-    return updateRow(SHEET_NAMES.ACCOUNTS, id, data);
-}
-
 function handleUpdateGoal(data) {
     if (data['amount']) {
        const ss = SpreadsheetApp.getActiveSpreadsheet();
-       const goals = readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.GOALS));
-       const goal = goals.find(r => String(r['ID']) === String(data['ID']));
+       const goal = readSheetAsJSON(ss.getSheetByName(SHEET_NAMES.GOALS)).find(r => r['ID'] === data['ID']);
        if(goal) {
           const current = parseFloat(goal['MontoAhorrado'] || 0);
           const added = parseFloat(data['amount']);
@@ -292,40 +243,28 @@ function handleUpdateGoal(data) {
 }
 
 // ------------------------------------------------------------------
-// HELPERS BD
+// HELPERS GENÉRICOS DE BD
 // ------------------------------------------------------------------
 
 function createRow(sheetName, dataObj) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(sheetName);
   const headers = getSheetHeaderMap(sheet); 
+  
   const id = dataObj['ID'] || Utilities.getUuid();
   dataObj['ID'] = id; 
   
   const lastCol = sheet.getLastColumn();
   const rowArray = new Array(lastCol).fill('');
+  
   for (const [key, value] of Object.entries(dataObj)) {
-    if (headers.hasOwnProperty(key)) rowArray[headers[key] - 1] = value;
+    if (headers.hasOwnProperty(key)) {
+       rowArray[headers[key] - 1] = value;
+    }
   }
+  
   sheet.appendRow(rowArray);
   return responseJSON({ status: 'success', message: 'Creado', id: id });
-}
-
-function createRowWithCheck(sheetName, dataObj) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(sheetName);
-    const data = sheet.getDataRange().getValues();
-    const headers = getSheetHeaderMap(sheet);
-    
-    // Evitar duplicados para logs de hábitos (mismo hábito, misma fecha)
-    if (sheetName === SHEET_NAMES.HABITS_LOG) {
-        const idCol = headers['ID_Habito'] - 1;
-        const dateCol = headers['Fecha'] - 1;
-        const exists = data.some(row => String(row[idCol]) === String(dataObj.ID_Habito) && String(row[dateCol]).substring(0,10) === String(dataObj.Fecha).substring(0,10));
-        if (exists) return responseJSON({ status: 'success', message: 'Ya existe' });
-    }
-    
-    return createRow(sheetName, dataObj);
 }
 
 function updateRow(sheetName, id, dataObj) {
@@ -333,7 +272,9 @@ function updateRow(sheetName, id, dataObj) {
   const sheet = ss.getSheetByName(sheetName);
   const headers = getSheetHeaderMap(sheet);
   const data = sheet.getDataRange().getValues();
+  
   const idColIndex = headers['ID'] - 1;
+  if (idColIndex === undefined) return responseJSON({status:'error', message:'No hay columna ID'});
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][idColIndex]) === String(id)) {
@@ -355,12 +296,9 @@ function deleteRow(sheetName, id) {
   const headers = getSheetHeaderMap(sheet);
   const data = sheet.getDataRange().getValues();
   const idColIndex = headers['ID'] - 1;
-  const idColHabitoIndex = headers['ID_Habito'] - 1;
-
+  
   for (let i = 1; i < data.length; i++) {
-    // Check ID or ID_Habito for habit logs
-    const rowId = data[i][idColIndex] || data[i][idColHabitoIndex];
-    if (String(rowId) === String(id)) {
+    if (String(data[i][idColIndex]) === String(id)) {
        sheet.deleteRow(i + 1);
        return responseJSON({ status: 'success', message: 'Eliminado' });
     }
@@ -396,31 +334,53 @@ function getSheetHeaders(sheet) {
    return sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 }
 
+function updateAccountBalance(accountName, amount, type) {
+  try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET_NAMES.ACCOUNTS);
+      const rows = readSheetAsJSON(sheet);
+      const acc = rows.find(r => r['Nombre'] === accountName);
+      
+      if (acc) {
+         let current = parseFloat(acc['SaldoActual'] || 0);
+         let val = parseFloat(amount);
+         if (type === 'Gasto') current -= val;
+         else current += val;
+         updateRow(SHEET_NAMES.ACCOUNTS, acc['ID'], { 'SaldoActual': current });
+      }
+  } catch(e) {
+      console.log('Error updating balance: ' + e);
+  }
+}
+
 function calculateRealPaymentDate(dateStr, cutoff, payment) {
     if (!cutoff || !payment) return dateStr;
     const date = new Date(dateStr);
     const d = date.getDate();
     let m = date.getMonth();
     let y = date.getFullYear();
+    
+    let targetM = m;
+    let targetY = y;
     if (d > cutoff) {
-        m++;
-        if (m > 11) { m = 0; y++; }
+        targetM++;
+        if (targetM > 11) { targetM = 0; targetY++; }
     }
+    
+    let payM = targetM;
+    let payY = targetY;
+    
     if (payment <= cutoff) {
-        m++;
-        if (m > 11) { m = 0; y++; }
+        payM++;
+        if (payM > 11) { payM = 0; payY++; }
     }
-    const finalM = m + 1;
+    
+    const finalM = payM + 1;
     const sm = finalM < 10 ? '0'+finalM : finalM;
     const sd = payment < 10 ? '0'+payment : payment;
-    return `${y}-${sm}-${sd}`;
+    return `${payY}-${sm}-${sd}`;
 }
 
 function responseJSON(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function recalcBalances() {
-    // Placeholder - GetData already recalculates dynamically
-    return responseJSON({ status: 'success', message: 'Saldos dinámicos en v5' });
 }
