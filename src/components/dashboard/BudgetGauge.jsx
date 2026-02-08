@@ -1,10 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { calculateMonthlyTotals, formatCurrency } from '../../utils/financialUtils';
 import { generateProjectedTransactions } from '../../utils/projectionUtils';
 
 const BudgetGauge = ({ transactions, budgetLimit = 0, currentMonthExpense = 0, recurringRules = [] }) => {
-    const [viewMode, setViewMode] = useState('monthly'); // 'monthly' | 'annual'
+    const [viewMode, setViewMode] = useState('monthly');
+    const [isClient, setIsClient] = useState(false);
+    useEffect(() => {
+        const timer = setTimeout(() => setIsClient(true), 130);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Cálculo de datos según el modo
     const { expenseValue, limitValue, labelText } = useMemo(() => {
@@ -93,26 +98,28 @@ const BudgetGauge = ({ transactions, budgetLimit = 0, currentMonthExpense = 0, r
             </div>
 
             <div className="relative w-full h-full flex items-center justify-center mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            dataKey="value"
-                            startAngle={180}
-                            endAngle={0}
-                            data={data}
-                            cx="50%"
-                            cy="70%"
-                            innerRadius={80}
-                            outerRadius={100}
-                            paddingAngle={0}
-                            stroke="none"
-                        >
-                            <Cell fill={percentage > 90 ? '#ef4444' : '#10b981'} /> {/* Gastado */}
-                            <Cell fill="#ef4444" /> {/* Excedente (Siempre rojo si existe) */}
-                            <Cell fill="#f3f4f6" /> {/* Restante */}
-                        </Pie>
-                    </PieChart>
-                </ResponsiveContainer>
+                {isClient && (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <PieChart>
+                            <Pie
+                                dataKey="value"
+                                startAngle={180}
+                                endAngle={0}
+                                data={data}
+                                cx="50%"
+                                cy="70%"
+                                innerRadius={80}
+                                outerRadius={100}
+                                paddingAngle={0}
+                                stroke="none"
+                            >
+                                <Cell fill={percentage > 90 ? '#ef4444' : '#10b981'} /> {/* Gastado */}
+                                <Cell fill="#ef4444" /> {/* Excedente (Siempre rojo si existe) */}
+                                <Cell fill="#f3f4f6" /> {/* Restante */}
+                            </Pie>
+                        </PieChart>
+                    </ResponsiveContainer>
+                )}
                 <div className="absolute top-[65%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
                     <p className="text-3xl font-bold text-gray-800">{Math.round(percentage)}%</p>
                     <p className="text-sm text-gray-500">{labelText}</p>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { calculateCategoryTotals, formatCurrency } from '../../utils/financialUtils';
 
@@ -8,6 +8,12 @@ const COLORS = [
 ];
 
 const CategoryPieChart = ({ transactions, onSliceClick }) => {
+    const [isClient, setIsClient] = useState(false);
+    useEffect(() => {
+        const timer = setTimeout(() => setIsClient(true), 150); // Un poco mas de tiempo
+        return () => clearTimeout(timer);
+    }, []);
+
     const data = calculateCategoryTotals(transactions) || [];
     const total = data.reduce((acc, curr) => acc + (curr.value || 0), 0);
 
@@ -22,29 +28,31 @@ const CategoryPieChart = ({ transactions, onSliceClick }) => {
             <div className="flex flex-col md:flex-row gap-6 flex-1">
                 {/* Gráfico */}
                 <div className="flex-1 min-h-[250px] relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={data}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={80}
-                                paddingAngle={2}
-                                dataKey="value"
-                                onClick={(entry) => onSliceClick && onSliceClick(entry)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                formatter={(value) => formatCurrency(value)}
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    {isClient && (
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                            <PieChart>
+                                <Pie
+                                    data={data}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={2}
+                                    dataKey="value"
+                                    onClick={(entry) => onSliceClick && onSliceClick(entry)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    {data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value) => formatCurrency(value)}
+                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    )}
                     {/* Centro con Total */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
                         <span className="text-xs text-gray-400 uppercase">Total</span>

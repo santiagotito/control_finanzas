@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatCurrency } from '../utils/financialUtils';
 import { getRuleStatus } from '../utils/projectionUtils';
-import { CreditCard, Wallet, Plus, Save, Loader2, Trash2, Edit, ChevronDown, ChevronUp, Filter, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { CreditCard, Wallet, Plus, Save, Loader2, Trash2, Edit, ChevronDown, ChevronUp, Filter, ArrowUpCircle, ArrowDownCircle, ShieldAlert } from 'lucide-react';
 
 const AccountsPage = () => {
-    const { accounts, transactions, addAccount, updateAccount, deleteAccount, loading } = useAppContext();
+    const { accounts, transactions, addAccount, updateAccount, deleteAccount, loading, recurringRules } = useAppContext();
     const [showForm, setShowForm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -175,17 +175,29 @@ const AccountsPage = () => {
         return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
-    const getNextPaymentDate = (day) => {
-        if (!day) return null;
+    const getNextPaymentDate = (acc) => {
+        const day = parseInt(acc.DiaPago);
+        if (isNaN(day)) return null;
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth();
         const currentDay = now.getDate();
 
-        let paymentDate = new Date(year, month, parseInt(day));
-        if (currentDay > parseInt(day)) {
-            paymentDate = new Date(year, month + 1, parseInt(day));
+        let paymentDate = new Date(year, month, day);
+        if (currentDay > day) {
+            paymentDate = new Date(year, month + 1, day);
         }
+
+        // Si ya se registró el pago para este mes/fecha calculada, pasamos al siguiente mes
+        try {
+            const payMonthStr = paymentDate.toISOString().substring(0, 7);
+            if (acc.UltimoPago === payMonthStr) {
+                paymentDate.setMonth(paymentDate.getMonth() + 1);
+            }
+        } catch (e) {
+            console.error("Error calculating next payment date", e);
+        }
+
         return paymentDate;
     };
 
@@ -312,8 +324,8 @@ const AccountsPage = () => {
                                     {typeAccounts
                                         .sort((a, b) => {
                                             if (type === 'Tarjeta de Crédito') {
-                                                const dateA = getNextPaymentDate(a.DiaPago);
-                                                const dateB = getNextPaymentDate(b.DiaPago);
+                                                const dateA = getNextPaymentDate(a);
+                                                const dateB = getNextPaymentDate(b);
                                                 if (dateA && dateB) return dateA - dateB;
                                                 return 0;
                                             }
@@ -338,11 +350,14 @@ const AccountsPage = () => {
                                                                 <h3 className="font-bold text-gray-800 text-lg">{acc.Nombre}</h3>
                                                                 <div className="flex flex-col">
                                                                     {acc.NumeroCuenta && <span className="text-xs text-gray-400 font-mono tracking-wider">{acc.NumeroCuenta}</span>}
-                                                                    {acc.Tipo === 'Tarjeta de Crédito' && acc.DiaPago && (
-                                                                        <span className="text-[10px] text-indigo-500 font-semibold uppercase mt-0.5">
-                                                                            Siguiente Pago: {getNextPaymentDate(acc.DiaPago).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
-                                                                        </span>
-                                                                    )}
+                                                                    {acc.Tipo === 'Tarjeta de Crédito' && acc.DiaPago && (() => {
+                                                                        const nextPayDate = getNextPaymentDate(acc);
+                                                                        return nextPayDate ? (
+                                                                            <span className="text-[10px] text-indigo-500 font-semibold uppercase mt-0.5">
+                                                                                Siguiente Pago: {nextPayDate.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                                                                            </span>
+                                                                        ) : null;
+                                                                    })()}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -364,6 +379,26 @@ const AccountsPage = () => {
                                                             </div>
 
                                                             <div className="flex items-center gap-2">
+                                                                {acc.Tipo === 'Tarjeta de Crédito' && (
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const nextDate = getNextPaymentDate(acc);
+                                                                            if (!nextDate) {
+                                                                                alert("No se pudo calcular la fecha de pago. Verifica el Día de Pago de la cuenta.");
+                                                                                return;
+                                                                            }
+                                                                            const monthStr = nextDate.toISOString().substring(0, 7);
+                                                                            if (window.confirm(`¿Marcar la tarjeta ${acc.Nombre} como pagada para el periodo de ${monthStr}?`)) {
+                                                                                await updateAccount({ ...acc, UltimoPago: monthStr });
+                                                                            }
+                                                                        }}
+                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors border border-green-200"
+                                                                        title="Marcar como pagada este mes"
+                                                                    >
+                                                                        <ShieldAlert size={14} className="text-green-600" />
+                                                                        PAGAR
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     onClick={() => toggleAccountDetail(acc.ID)}
                                                                     className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"

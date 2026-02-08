@@ -125,7 +125,7 @@ export const generateProjectedTransactions = (rules, yearMonth, existingTransact
  */
 export const getRuleStatus = (rule, transactions) => {
     if (!rule.FechaInicio || !rule.FechaFin) {
-        return { isFinite: false, paid: 0, total: 0, nextInstallment: null };
+        return { isFinite: false, paid: 0, total: 0, nextInstallment: null, totalDebt: 0 };
     }
 
     const ruleName = (rule.Nombre || '').toLowerCase().trim();

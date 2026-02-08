@@ -6,15 +6,15 @@ const api = {
     // Obtener todos los datos
     login: async (email, password) => {
         try {
-            const formData = new URLSearchParams();
-            formData.append('action', 'login');
-            // Enviar campos planos para que GAS los lea en e.parameter
-            formData.append('email', email);
-            formData.append('password', password);
-
             const response = await fetch(API_URL, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                },
+                body: JSON.stringify({
+                    action: 'login',
+                    payload: { email, password }
+                })
             });
             const result = await response.json();
             return result;
@@ -146,15 +146,15 @@ const api = {
     // Actualizar una cuenta
     updateAccount: async (account) => {
         const payload = {
-            ID: account.id, // ID must be mapped to ID
-            Nombre: account.name,
-            Tipo: account.type,
-            // SaldoInicial no se actualiza usualmente, pero lo enviamos
-            SaldoInicial: account.initialBalance,
-            Moneda: account.currency,
-            DiaCorte: account.cutoffDay,
-            DiaPago: account.paymentDay,
-            NumeroCuenta: account.accountNumber
+            ID: account.ID || account.id || account.ID,
+            Nombre: account.Nombre || account.name,
+            Tipo: account.Tipo || account.type,
+            SaldoInicial: account.SaldoInicial || account.initialBalance,
+            Moneda: account.Moneda || account.currency,
+            DiaCorte: account.DiaCorte || account.cutoffDay,
+            DiaPago: account.DiaPago || account.paymentDay,
+            NumeroCuenta: account.NumeroCuenta || account.accountNumber,
+            UltimoPago: account.UltimoPago
         };
         try {
             const response = await axios.post(API_URL, JSON.stringify({

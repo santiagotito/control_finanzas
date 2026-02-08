@@ -12,7 +12,7 @@ import IncomeVsExpenseBar from '../components/dashboard/IncomeVsExpenseBar';
 import DeferredCalculator from '../components/tools/DeferredCalculator';
 
 const Dashboard = () => {
-    const { loading, error, transactions, recurringRules, accounts, goals } = useAppContext();
+    const { loading, error, transactions, recurringRules, accounts, goals, updateAccount } = useAppContext();
     const { smartInsights, cardInsights } = useSmartInsights();
     const [showCalculator, setShowCalculator] = useState(false);
     const [selectedDrillDown, setSelectedDrillDown] = useState(null); // { title: string, transactions: [] }
@@ -324,10 +324,26 @@ const Dashboard = () => {
                             <Zap size={14} className="fill-current" /> Tu Estrategia de Hoy
                         </div>
                         {smartInsights.length > 0 ? (
-                            <>
-                                <h1 className="text-3xl font-black mb-2 leading-tight">{smartInsights[0].title}</h1>
-                                <p className="text-white/90 text-sm max-w-xl font-medium leading-relaxed">{smartInsights[0].desc}</p>
-                            </>
+                            <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                <div>
+                                    <h1 className="text-3xl font-black mb-2 leading-tight">{smartInsights[0].title}</h1>
+                                    <p className="text-white/90 text-sm max-w-xl font-medium leading-relaxed">{smartInsights[0].desc}</p>
+                                </div>
+                                {smartInsights[0].action === 'Pagar' && (
+                                    <button
+                                        onClick={async () => {
+                                            const card = accounts.find(a => a.ID === smartInsights[0].accountId);
+                                            if (card && window.confirm(`¿Confirmas que ya pagaste la tarjeta ${card.Nombre}?`)) {
+                                                const success = await updateAccount({ ...card, UltimoPago: smartInsights[0].targetPayMonth });
+                                                if (!success) alert("No se pudo guardar el pago. Asegúrate de que la columna 'UltimoPago' exista en tu Google Sheet (pestaña Cuentas).");
+                                            }
+                                        }}
+                                        className="bg-white text-red-600 px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-wider hover:bg-red-50 transition-all shadow-lg active:scale-95"
+                                    >
+                                        Marcar como Pagada
+                                    </button>
+                                )}
+                            </div>
                         ) : (
                             <>
                                 <h1 className="text-3xl font-black mb-2 leading-tight">¡Todo bajo control!</h1>

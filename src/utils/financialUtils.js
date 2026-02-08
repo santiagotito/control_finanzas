@@ -41,12 +41,14 @@ export const calculateCategoryTotals = (transactions) => {
 };
 
 export const formatCurrency = (value) => {
+    const num = parseFloat(value);
+    const safeValue = isNaN(num) ? 0 : num;
     return new Intl.NumberFormat('es-CO', {
         style: 'currency',
         currency: 'USD',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-    }).format(value);
+    }).format(safeValue);
 };
 
 export const getCategoryAlerts = (transactions) => {

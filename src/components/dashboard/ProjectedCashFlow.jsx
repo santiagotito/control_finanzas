@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
     ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, LabelList
 } from 'recharts';
@@ -8,6 +8,14 @@ import { formatCurrency } from '../../utils/financialUtils';
 
 const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, selectedAccount = 'Todas', startMonth }) => {
     const [monthsToProject, setMonthsToProject] = React.useState(12);
+    const [isClient, setIsClient] = useState(false);
+    const containerRef = React.useRef(null);
+
+    useEffect(() => {
+        // Un pequeño retraso para asegurar que el DOM se ha pintado y tiene dimensiones
+        const timer = setTimeout(() => setIsClient(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     const data = useMemo(() => {
         // if (!recurringRules || recurringRules.length === 0) return []; // Eliminado para permitir transacciones manuales futuras
@@ -107,68 +115,70 @@ const ProjectedCashFlow = ({ transactions, recurringRules, currentBalance = 0, s
                 </div>
             </div>
 
-            <div className="w-full h-72" style={{ minHeight: '300px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
-                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                        <YAxis hide domain={['auto', 'auto']} />
-                        <Tooltip
-                            formatter={(value) => formatCurrency(value)}
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        />
-
-                        <Bar dataKey="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} stackId="a" />
-                        <Bar dataKey="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={12} stackId="b" />
-
-                        {/* Linea de Flujo Neto Mensual */}
-                        <Line
-                            type="monotone"
-                            dataKey="Balance"
-                            stroke="#3b82f6"
-                            strokeWidth={3}
-                            dot={{ r: 3, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
-                            activeDot={{ r: 5 }}
-                        >
-                            <LabelList
-                                dataKey="Balance"
-                                position="top"
-                                content={(props) => {
-                                    const { x, y, value } = props;
-                                    if (value === 0) return null;
-                                    return (
-                                        <g>
-                                            <rect
-                                                x={x - 22}
-                                                y={y - 22}
-                                                width={44}
-                                                height={14}
-                                                rx={7}
-                                                fill={value < 0 ? '#f59e0b' : '#3b82f6'}
-                                            />
-                                            <text
-                                                x={x}
-                                                y={y - 14}
-                                                fill="#fff"
-                                                textAnchor="middle"
-                                                dominantBaseline="middle"
-                                                style={{ fontSize: '9px', fontWeight: 'bold' }}
-                                            >
-                                                {Math.abs(value) > 1000 ? `${(value / 1000).toFixed(0)}k` : value.toFixed(0)}
-                                            </text>
-                                        </g>
-                                    );
-                                }}
+            <div className="w-full h-72 min-h-[300px]">
+                {isClient && (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <ComposedChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                            <YAxis hide domain={['auto', 'auto']} />
+                            <Tooltip
+                                formatter={(value) => formatCurrency(value)}
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             />
-                        </Line>
-                    </ComposedChart>
-                </ResponsiveContainer>
+
+                            <Bar dataKey="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} stackId="a" />
+                            <Bar dataKey="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={12} stackId="b" />
+
+                            {/* Linea de Flujo Neto Mensual */}
+                            <Line
+                                type="monotone"
+                                dataKey="Balance"
+                                stroke="#3b82f6"
+                                strokeWidth={3}
+                                dot={{ r: 3, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                                activeDot={{ r: 5 }}
+                            >
+                                <LabelList
+                                    dataKey="Balance"
+                                    position="top"
+                                    content={(props) => {
+                                        const { x, y, value } = props;
+                                        if (value === 0) return null;
+                                        return (
+                                            <g>
+                                                <rect
+                                                    x={x - 22}
+                                                    y={y - 22}
+                                                    width={44}
+                                                    height={14}
+                                                    rx={7}
+                                                    fill={value < 0 ? '#f59e0b' : '#3b82f6'}
+                                                />
+                                                <text
+                                                    x={x}
+                                                    y={y - 14}
+                                                    fill="#fff"
+                                                    textAnchor="middle"
+                                                    dominantBaseline="middle"
+                                                    style={{ fontSize: '9px', fontWeight: 'bold' }}
+                                                >
+                                                    {Math.abs(value) > 1000 ? `${(value / 1000).toFixed(0)}k` : value.toFixed(0)}
+                                                </text>
+                                            </g>
+                                        );
+                                    }}
+                                />
+                            </Line>
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                )}
             </div>
         </div>
     );

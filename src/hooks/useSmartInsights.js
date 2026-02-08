@@ -76,14 +76,29 @@ export const useSmartInsights = () => {
             });
 
             cardInsights.allCards.forEach(card => {
-                const paymentIn = card.paymentDay - currentDay;
-                if (paymentIn >= 0 && paymentIn <= 3) {
+                // Determinamos el mes del próximo pago
+                let targetPaymentDate = new Date(today.getFullYear(), today.getMonth(), card.paymentDay);
+                if (currentDay > card.paymentDay) {
+                    targetPaymentDate.setMonth(targetPaymentDate.getMonth() + 1);
+                }
+                const targetPayMonth = targetPaymentDate.toISOString().substring(0, 7); // Format YYYY-MM
+
+                // Diferencia real en días
+                const diffTime = targetPaymentDate.getTime() - today.getTime();
+                const paymentIn = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                // Si el último pago registrado coincide con el mes que toca pagar ahora, no mostrar alerta
+                const alreadyPaid = card.UltimoPago === targetPayMonth;
+
+                if (paymentIn >= 0 && paymentIn <= 3 && !alreadyPaid) {
                     insights.push({
                         id: `card-pay-${card.ID}`,
                         type: 'danger',
                         title: `Pagar ${card.Nombre}`,
                         desc: `Faltan solo ${paymentIn} días para tu fecha de pago (Día ${card.paymentDay}). Evita intereses.`,
-                        action: 'Urgente'
+                        action: 'Pagar', // Cambiado de 'Urgente' a 'Pagar' para mayor claridad
+                        accountId: card.ID,
+                        targetPayMonth: targetPayMonth
                     });
                 }
             });
@@ -109,7 +124,7 @@ export const useSmartInsights = () => {
             const priority = { danger: 3, warning: 2, success: 1 };
             return priority[b.type] - priority[a.type];
         });
-    }, [transactions, cardInsights, today, currentDay]);
+    }, [transactions, cardInsights, today.toISOString().substring(0, 10), currentDay]);
 
     return { cardInsights, smartInsights };
 };
