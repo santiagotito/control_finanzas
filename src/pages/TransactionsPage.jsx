@@ -540,6 +540,7 @@ const TransactionsPage = () => {
                             refreshData();
                             setTransactionToEdit(null);
                         }}
+                        onCancel={() => setTransactionToEdit(null)}
                         initialData={transactionToEdit}
                     />
                 </div>

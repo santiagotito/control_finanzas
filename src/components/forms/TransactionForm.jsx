@@ -1,34 +1,32 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { Save, Loader2, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Save, Loader2, Plus, Trash2, AlertTriangle, X } from 'lucide-react';
 
-const TransactionForm = ({ onSuccess, initialData = null }) => {
+// Estado inicial por defecto (fuera del componente para no recrearlo en cada render)
+const getDefaultState = () => ({
+    id: null, // [NEW] Track ID internally
+    isVirtual: false, // [NEW] Track virtual status
+    type: 'Gasto',
+    amount: '',
+    category: '',
+    account: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    monthEffect: new Date().toISOString().slice(0, 7),
+    hasCommission: false,
+    commissionAmount: '',
+    hasTax: false,
+    taxAmount: '',
+    goalId: '' // [NEW] Link to Goal
+});
+
+const TransactionForm = ({ onSuccess, onCancel, initialData = null }) => {
     const { addTransaction, updateTransaction, accounts, settings, addCategory, goals } = useAppContext();
     const [loading, setLoading] = useState(false);
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
 
-    // Estado inicial por defecto
-    const defaultState = {
-        id: null, // [NEW] Track ID internally
-        isVirtual: false, // [NEW] Track virtual status
-        type: 'Gasto',
-        amount: '',
-        category: '',
-        account: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0],
-        monthEffect: new Date().toISOString().slice(0, 7),
-        hasCommission: false,
-        commissionAmount: '',
-        hasCommission: false,
-        commissionAmount: '',
-        hasTax: false,
-        taxAmount: '',
-        goalId: '' // [NEW] Link to Goal
-    };
-
-    const [formData, setFormData] = useState(defaultState);
+    const [formData, setFormData] = useState(getDefaultState);
 
     // Efecto para cargar datos iniciales si vienen (ej: confirmar proyección)
     React.useEffect(() => {
@@ -50,14 +48,20 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                 Estado: 'Validado',
                 hasCommission: false,
                 commissionAmount: '',
-                hasCommission: false,
-                commissionAmount: '',
                 hasTax: false,
                 taxAmount: '',
                 goalId: initialData.MetaID || '' // [NEW] Load Goal Link
             });
+        } else {
+            // Si el padre limpia la edición, volver al formulario vacío
+            setFormData(getDefaultState());
         }
     }, [initialData]);
+
+    const handleCancelEdit = () => {
+        setFormData(getDefaultState());
+        if (onCancel) onCancel();
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -159,7 +163,7 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
 
             if (success) {
                 // Siempre limpiar el formulario tras éxito para permitir nueva entrada inmediata
-                setFormData(defaultState);
+                setFormData(getDefaultState());
 
                 if (onSuccess) onSuccess();
             } else {
@@ -195,9 +199,6 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
 
     // Filtrar categorías según tipo
     const validCategories = settings.filter(s => s.Tipo === formData.type);
-
-    // Obtener cuentas (si no hay, mostrar advertencia)
-    const accountOptions = accounts.map(a => a.Nombre);
 
     return (
         <form onSubmit={handleSubmit} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
@@ -501,14 +502,27 @@ const TransactionForm = ({ onSuccess, initialData = null }) => {
                 </div>
             )}
 
-            <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
-            >
-                {loading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                {formData.id && !formData.isVirtual ? 'Actualizar Transacción' : 'Guardar Transacción'}
-            </button>
+            <div className="flex gap-2">
+                {formData.id && (
+                    <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        disabled={loading}
+                        className="px-4 bg-gray-100 text-gray-600 font-medium py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-70 text-sm"
+                    >
+                        <X size={16} />
+                        Cancelar
+                    </button>
+                )}
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+                >
+                    {loading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                    {formData.id && !formData.isVirtual ? 'Actualizar Transacción' : 'Guardar Transacción'}
+                </button>
+            </div>
         </form>
     );
 };
