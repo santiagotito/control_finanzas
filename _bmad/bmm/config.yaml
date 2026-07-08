@@ -1,0 +1,11 @@
+# Configuración BMAD (BMM) para este proyecto
+project_name: Control Financiero
+user_name: Santi
+communication_language: Español
+document_output_language: Español
+
+# Carpetas de artefactos
+planning_artifacts: docs
+project_knowledge: docs
+output_folder: docs
+dev_story_location: docs/stories
