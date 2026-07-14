@@ -10,6 +10,7 @@ import ProjectedCashFlow from '../components/dashboard/ProjectedCashFlow';
 import CategoryPieChart from '../components/dashboard/CategoryPieChart';
 import IncomeVsExpenseBar from '../components/dashboard/IncomeVsExpenseBar';
 import DeferredCalculator from '../components/tools/DeferredCalculator';
+import MonthlyAccountsMatrix from '../components/dashboard/MonthlyAccountsMatrix';
 
 const Dashboard = () => {
     const { loading, error, transactions, recurringRules, accounts, goals, updateAccount } = useAppContext();
@@ -312,6 +313,13 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* SECCIÓN: MATRIZ MENSUAL POR CUENTA (cuánto hay / cuánto comprometido) */}
+            <MonthlyAccountsMatrix
+                transactions={transactions}
+                recurringRules={recurringRules}
+                accounts={accounts}
+            />
 
             {/* SECCIÓN 1: ESTRATEGIA DEL DÍA (HEADER) */}
             <div className={`rounded-3xl p-6 text-white shadow-xl relative overflow-hidden transition-all duration-500 ${smartInsights.length > 0 && smartInsights[0].type === 'danger' ? 'bg-gradient-to-br from-red-600 to-red-800' :
