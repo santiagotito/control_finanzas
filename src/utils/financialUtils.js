@@ -1,5 +1,17 @@
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
+// Cuentas de ahorro/emergencia: se muestran aparte, no suman a totales
+// y alimentan la meta "Fondo de Emergencia".
+// Criterio: tipo Inversión o nombre con palabra clave.
+export const isEmergencyAccount = (acc) =>
+    acc.Tipo === 'Inversión' || /ahorro|emergencia|reserva/i.test(acc.Nombre || '');
+
+// Saldo real total de las cuentas de emergencia/ahorro
+export const getEmergencyBalance = (accounts) =>
+    (accounts || [])
+        .filter(a => a.Tipo !== 'Tarjeta de Crédito' && isEmergencyAccount(a))
+        .reduce((sum, a) => sum + (parseFloat(a.SaldoActual) || 0), 0);
+
 export const calculateMonthlyTotals = (transactions) => {
     const now = new Date();
     const start = startOfMonth(now);

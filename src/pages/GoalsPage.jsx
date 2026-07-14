@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { formatCurrency } from '../utils/financialUtils';
-import { Loader2, Plus, Target, CheckCircle2, Trash2, Edit, TrendingUp, DollarSign } from 'lucide-react';
+import { formatCurrency, getEmergencyBalance } from '../utils/financialUtils';
+import { Loader2, Plus, Target, CheckCircle2, Trash2, Edit, TrendingUp, DollarSign, Landmark } from 'lucide-react';
+
+// La meta "Fondo de Emergencia" no se alimenta a mano: refleja el saldo
+// real de la cuenta de emergencia (la que está aparte en el Dashboard).
+const isEmergencyGoal = (goal) => /emergencia/i.test(goal.Nombre || '');
 
 const GoalsPage = () => {
-    const { goals, addGoal, updateGoal, updateGoalFull, deleteGoal, loading } = useAppContext();
+    const { goals, addGoal, updateGoal, updateGoalFull, deleteGoal, loading, accounts } = useAppContext();
+    const emergencyBalance = getEmergencyBalance(accounts);
     const [showForm, setShowForm] = useState(false);
     const [editingGoal, setEditingGoal] = useState(null);
     const [submitting, setSubmitting] = useState(false);
@@ -15,15 +20,12 @@ const GoalsPage = () => {
         name: '',
         targetAmount: '',
         deadline: '',
-        targetAmount: '',
-        deadline: '',
         color: '#6366f1', // Indigo-500 default
         inspiration: '' // [NEW]
     });
 
     const resetForm = () => {
         setShowForm(false);
-        setEditingGoal(null);
         setEditingGoal(null);
         setFormData({ name: '', targetAmount: '', deadline: '', color: '#6366f1', inspiration: '' });
     };
@@ -33,7 +35,6 @@ const GoalsPage = () => {
         setFormData({
             name: goal.Nombre,
             targetAmount: goal.MontoObjetivo,
-            deadline: goal.FechaLimite ? goal.FechaLimite.split('T')[0] : '',
             deadline: goal.FechaLimite ? goal.FechaLimite.split('T')[0] : '',
             color: goal.Color || '#6366f1',
             inspiration: goal.Inspiracion || '' // [NEW]
@@ -134,12 +135,11 @@ const GoalsPage = () => {
                             </div>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Fecha Límite</label>
+                            <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Fecha Límite (opcional)</label>
                             <input
                                 type="date"
                                 value={formData.deadline}
                                 onChange={e => setFormData({ ...formData, deadline: e.target.value })}
-                                required
                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
                             />
                         </div>
@@ -193,7 +193,9 @@ const GoalsPage = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {(goals || []).map((goal) => {
-                    const saved = parseFloat(goal.MontoAhorrado) || 0; // [FIX] NaN Protection
+                    const linkedToEmergency = isEmergencyGoal(goal);
+                    // La meta de emergencia refleja el saldo real de la cuenta apartada
+                    const saved = linkedToEmergency ? emergencyBalance : (parseFloat(goal.MontoAhorrado) || 0);
                     const target = parseFloat(goal.MontoObjetivo) || 1;
                     const progress = Math.min(100, (saved / target) * 100);
                     const isSaving = savingAmount.id === goal.ID;
@@ -241,7 +243,7 @@ const GoalsPage = () => {
                                 <div className="flex justify-between items-end">
                                     <div className="space-y-1">
                                         <p className="text-xs text-gray-400 uppercase font-bold tracking-tight">HAS AHORRADO</p>
-                                        <p className="text-2xl font-black text-gray-900">{formatCurrency(parseFloat(goal.MontoAhorrado) || 0)}</p>
+                                        <p className="text-2xl font-black text-gray-900">{formatCurrency(saved)}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xs text-gray-400 uppercase font-bold tracking-tight">OBJETIVO</p>
@@ -272,7 +274,12 @@ const GoalsPage = () => {
 
                             {/* Card Action */}
                             <div className="px-5 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-100">
-                                {isSaving ? (
+                                {linkedToEmergency ? (
+                                    <div className="flex items-center justify-center gap-2 py-2 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+                                        <Landmark size={14} />
+                                        Saldo en vivo de tu cuenta de emergencia
+                                    </div>
+                                ) : isSaving ? (
                                     <div className="flex gap-2 animate-fadeIn">
                                         <input
                                             type="number"

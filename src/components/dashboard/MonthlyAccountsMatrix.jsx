@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatCurrency } from '../../utils/financialUtils';
+import { formatCurrency, isEmergencyAccount } from '../../utils/financialUtils';
 import { generateProjectedTransactions } from '../../utils/projectionUtils';
 import { CalendarRange } from 'lucide-react';
 
@@ -22,11 +22,6 @@ const txMonth = (t) => {
     if (!raw) return null;
     return raw.length > 7 ? raw.slice(0, 7) : raw;
 };
-
-// Cuentas de ahorro/emergencia: se muestran aparte y NO suman a ningún total.
-// Criterio: tipo Inversión o nombre con palabra clave.
-const isEmergencyAccount = (acc) =>
-    acc.Tipo === 'Inversión' || /ahorro|emergencia|reserva/i.test(acc.Nombre || '');
 
 const Cell = ({ value, bold = false, colorClass = 'text-gray-700' }) => (
     <td className={`px-2 py-1.5 text-right whitespace-nowrap tabular-nums ${bold ? 'font-bold' : 'font-medium'} ${colorClass}`}>
