@@ -24,9 +24,9 @@ const txMonth = (t) => {
 };
 
 // Cuentas de ahorro/emergencia: se muestran aparte y NO suman a ningún total.
-// Criterio: tipo Inversión o nombre con palabra clave (LIAM = cta emergencia de Santi).
+// Criterio: tipo Inversión o nombre con palabra clave.
 const isEmergencyAccount = (acc) =>
-    acc.Tipo === 'Inversión' || /ahorro|emergencia|reserva|liam/i.test(acc.Nombre || '');
+    acc.Tipo === 'Inversión' || /ahorro|emergencia|reserva/i.test(acc.Nombre || '');
 
 const Cell = ({ value, bold = false, colorClass = 'text-gray-700' }) => (
     <td className={`px-2 py-1.5 text-right whitespace-nowrap tabular-nums ${bold ? 'font-bold' : 'font-medium'} ${colorClass}`}>
