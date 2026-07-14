@@ -620,14 +620,6 @@ const TransactionsPage = () => {
                                                     <span>{tx.Descripcion || 'Sin descripción'}</span>
                                                     <div className="flex flex-wrap gap-1 mt-0.5 sm:mt-0">
                                                         {(tx.IsVirtual || tx.Estado === 'Pendiente') && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Pendiente</span>}
-                                                        {tx.IsPartial && (
-                                                            <span
-                                                                className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded"
-                                                                title={`Pagado ${formatCurrency(tx.MontoPagado)} de ${formatCurrency(tx.MontoOriginal)} este mes`}
-                                                            >
-                                                                Resta de {formatCurrency(tx.MontoOriginal)}
-                                                            </span>
-                                                        )}
                                                         {tx.Installment && (
                                                             <span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full font-semibold border border-sky-200">
                                                                 {tx.Installment}

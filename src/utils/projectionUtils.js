@@ -62,34 +62,24 @@ export const generateProjectedTransactions = (rules, yearMonth, existingTransact
         // Si el mes consultado es posterior al fin de la regla
         if (end && firstDayOfMonth > end) return;
 
-        // Buscar transacciones reales del mes que correspondan a esta regla
-        // Heurística por nombre (match exacto o contención bidireccional)
+        // La proyección solo se anula si el USUARIO actuó sobre ella:
+        // validarla u omitirla crea una transacción con el nombre EXACTO de la regla.
+        // Pagos sueltos con nombres parecidos (ej. "NEYRA 11JUL") NO la tocan.
         const ruleName = (rule.Nombre || '').toLowerCase().trim();
-        const matched = existingTransactions.filter(t => {
+        const resolvedByUser = existingTransactions.some(t => {
             // Verificar que sea del mismo mes (MesAfectacion manda)
             const rawMes = t.MesAfectacion || t['Mes Afectación'];
             let tDate = rawMes || t.Fecha;
             if (tDate && tDate.length > 7) tDate = tDate.slice(0, 7);
             if (tDate !== yearMonth) return false;
 
-            // Mismo tipo (un Ingreso no debe descontar una regla de Gasto)
+            // Mismo tipo (un Ingreso no anula una regla de Gasto)
             if (t.Tipo && rule.Tipo && t.Tipo !== rule.Tipo) return false;
 
             const txDesc = (t.Descripcion || '').toLowerCase().trim();
-            if (!txDesc || !ruleName) return false;
-            return txDesc === ruleName || txDesc.includes(ruleName) || ruleName.includes(txDesc);
+            return ruleName !== '' && txDesc === ruleName;
         });
-
-        // Pago parcial: proyectar solo lo que falta del mes.
-        // Un match de monto 0 (mes omitido / cubierto por adelantado) anula el mes completo.
-        const ruleAmount = parseFloat(rule.Monto) || 0;
-        let remaining = ruleAmount;
-        if (matched.length > 0) {
-            const hasZeroMarker = matched.some(t => (parseFloat(t.Monto) || 0) === 0);
-            const paid = matched.reduce((sum, t) => sum + (parseFloat(t.Monto) || 0), 0);
-            remaining = hasZeroMarker ? 0 : ruleAmount - paid;
-        }
-        if (remaining <= 0.005) return;
+        if (resolvedByUser) return;
 
         // Calcular día seguro (si febrero no tiene 30, usar 28)
         let day = parseInt(rule.DiaEjecucion);
@@ -104,13 +94,10 @@ export const generateProjectedTransactions = (rules, yearMonth, existingTransact
             Descripcion: rule.Nombre,
             Categoria: rule.Categoria,
             Cuenta: rule.Cuenta,
-            Monto: remaining,
+            Monto: rule.Monto,
             Tipo: rule.Tipo,
             Estado: 'Proyectado',
             IsVirtual: true,
-            IsPartial: matched.length > 0,
-            MontoOriginal: ruleAmount,
-            MontoPagado: ruleAmount - remaining,
             OriginalRule: rule,
             Installment: getInstallmentInfo(rule, dateStr)
         });
