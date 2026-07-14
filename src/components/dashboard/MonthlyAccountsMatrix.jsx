@@ -23,6 +23,11 @@ const txMonth = (t) => {
     return raw.length > 7 ? raw.slice(0, 7) : raw;
 };
 
+// Cuentas de ahorro/emergencia: se muestran aparte y NO suman a ningún total.
+// Criterio: tipo Inversión o nombre con palabra clave (LIAM = cta emergencia de Santi).
+const isEmergencyAccount = (acc) =>
+    acc.Tipo === 'Inversión' || /ahorro|emergencia|reserva|liam/i.test(acc.Nombre || '');
+
 const Cell = ({ value, bold = false, colorClass = 'text-gray-700' }) => (
     <td className={`px-2 py-1.5 text-right whitespace-nowrap tabular-nums ${bold ? 'font-bold' : 'font-medium'} ${colorClass}`}>
         {Math.abs(value) > 0.005 ? formatCurrency(value) : <span className="text-gray-300">—</span>}
@@ -97,12 +102,17 @@ const MonthlyAccountsMatrix = ({ transactions, recurringRules, accounts, monthsB
         });
 
         // Filas: cuentas registradas + cuentas que aparezcan en los datos
+        const emergencyNames = new Set(
+            accounts.filter(a => a.Tipo !== 'Tarjeta de Crédito' && isEmergencyAccount(a)).map(a => a.Nombre)
+        );
         const namesInData = new Set(
             Object.keys(income).concat(Object.keys(expense)).map(k => k.split('|')[1])
         );
-        const moneyNames = accounts.filter(a => a.Tipo !== 'Tarjeta de Crédito').map(a => a.Nombre);
+        const moneyNames = accounts
+            .filter(a => a.Tipo !== 'Tarjeta de Crédito' && !isEmergencyAccount(a))
+            .map(a => a.Nombre);
         [...namesInData].forEach(n => {
-            if (!moneyNames.includes(n) && !cardNames.has(n)) moneyNames.push(n);
+            if (!moneyNames.includes(n) && !cardNames.has(n) && !emergencyNames.has(n)) moneyNames.push(n);
         });
 
         const get = (map, month, cuenta) => map[`${month}|${cuenta}`] || 0;
@@ -119,6 +129,11 @@ const MonthlyAccountsMatrix = ({ transactions, recurringRules, accounts, monthsB
             name,
             values: months.map(m => get(expense, m, name) + get(income, m, name) * -1)
         }));
+        // Ahorro/emergencia: movimiento neto del mes (ingresos - gastos), fuera de los totales
+        const emergencyRows = [...emergencyNames].map(name => ({
+            name,
+            values: months.map(m => get(income, m, name) - get(expense, m, name))
+        }));
 
         const incomeTotal = months.map((_, i) => incomeRows.reduce((s, r) => s + r.values[i], 0));
         const expenseTotal = months.map((_, i) =>
@@ -134,6 +149,7 @@ const MonthlyAccountsMatrix = ({ transactions, recurringRules, accounts, monthsB
             incomeRows: incomeRows.filter(hasData),
             expenseRows: expenseRows.filter(hasData),
             cardRows: cardRows.filter(hasData),
+            emergencyRows: emergencyRows.filter(hasData),
             incomeTotal,
             expenseTotal,
             net
@@ -198,6 +214,18 @@ const MonthlyAccountsMatrix = ({ transactions, recurringRules, accounts, monthsB
                                 </td>
                             ))}
                         </tr>
+
+                        {/* AHORRO / EMERGENCIA — fuera de todos los totales */}
+                        {matrix.emergencyRows.map(r => (
+                            <Row
+                                key={`em-${r.name}`}
+                                label={`${r.name} (aparte)`}
+                                values={r.values}
+                                labelClass="bg-emerald-900 text-emerald-100"
+                                cellColor="text-emerald-900"
+                                bold
+                            />
+                        ))}
                     </tbody>
                 </table>
             </div>
