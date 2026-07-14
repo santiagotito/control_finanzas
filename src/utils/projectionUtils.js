@@ -49,54 +49,48 @@ export const generateProjectedTransactions = (rules, yearMonth, existingTransact
     const [year, month] = yearMonth.split('-').map(Number);
     const firstDayOfMonth = new Date(year, month - 1, 1);
 
-    return rules.filter(rule => {
+    const projected = [];
+
+    rules.forEach(rule => {
         // Validar fechas de inicio/fin de la regla
         const start = new Date(rule.FechaInicio);
         const end = rule.FechaFin ? new Date(rule.FechaFin) : null;
 
-        const startYear = start.getFullYear();
-        const startMonth = start.getMonth();
-
         // Si el mes consultado es anterior al inicio de la regla
-        if (firstDayOfMonth < new Date(startYear, startMonth, 1)) return false;
+        if (firstDayOfMonth < new Date(start.getFullYear(), start.getMonth(), 1)) return;
 
         // Si el mes consultado es posterior al fin de la regla
-        if (end && firstDayOfMonth > end) return false;
+        if (end && firstDayOfMonth > end) return;
 
-        // Validar si YA existe una transacción real generada por esta regla este mes
-        // Heurística simple: coincidencia de Nombre y Monto aproximado, o solo Nombre si es muy específico
-        // En TransactionsPage usábamos solo Nombre. Mantengamos eso pero podríamos mejorar.
-        const alreadyExists = existingTransactions.some(t => {
+        // Buscar transacciones reales del mes que correspondan a esta regla
+        // Heurística por nombre (match exacto o contención bidireccional)
+        const ruleName = (rule.Nombre || '').toLowerCase().trim();
+        const matched = existingTransactions.filter(t => {
             // Verificar que sea del mismo mes (MesAfectacion manda)
-            // Robustez: checar ambas keys por si acaso viene del sheet con formato original
             const rawMes = t.MesAfectacion || t['Mes Afectación'];
             let tDate = rawMes || t.Fecha;
-
-            // Normalize ISO date to YYYY-MM
-            if (tDate && tDate.length > 7) {
-                tDate = tDate.slice(0, 7);
-            }
-
+            if (tDate && tDate.length > 7) tDate = tDate.slice(0, 7);
             if (tDate !== yearMonth) return false;
 
-            // Match exacto o si la descripción contiene el nombre de la regla (para casos editados)
+            // Mismo tipo (un Ingreso no debe descontar una regla de Gasto)
+            if (t.Tipo && rule.Tipo && t.Tipo !== rule.Tipo) return false;
+
             const txDesc = (t.Descripcion || '').toLowerCase().trim();
-            const ruleName = (rule.Nombre || '').toLowerCase().trim();
-
-            // Bidirectional check for robustness
-            const match = txDesc === ruleName || txDesc.includes(ruleName) || ruleName.includes(txDesc);
-
-            // Console log específico para depurar el caso de "QUINCENA 1"
-            if (ruleName.includes('quincena')) {
-                console.log(`Checking suppression for Rule: "${ruleName}" vs Tx: "${txDesc}" -> Match? ${match}`);
-            }
-
-            return match;
+            if (!txDesc || !ruleName) return false;
+            return txDesc === ruleName || txDesc.includes(ruleName) || ruleName.includes(txDesc);
         });
 
-        return !alreadyExists;
+        // Pago parcial: proyectar solo lo que falta del mes.
+        // Un match de monto 0 (mes omitido / cubierto por adelantado) anula el mes completo.
+        const ruleAmount = parseFloat(rule.Monto) || 0;
+        let remaining = ruleAmount;
+        if (matched.length > 0) {
+            const hasZeroMarker = matched.some(t => (parseFloat(t.Monto) || 0) === 0);
+            const paid = matched.reduce((sum, t) => sum + (parseFloat(t.Monto) || 0), 0);
+            remaining = hasZeroMarker ? 0 : ruleAmount - paid;
+        }
+        if (remaining <= 0.005) return;
 
-    }).map(rule => {
         // Calcular día seguro (si febrero no tiene 30, usar 28)
         let day = parseInt(rule.DiaEjecucion);
         const daysInMonth = new Date(year, month, 0).getDate();
@@ -104,20 +98,25 @@ export const generateProjectedTransactions = (rules, yearMonth, existingTransact
 
         const dateStr = `${yearMonth}-${String(day).padStart(2, '0')}`;
 
-        return {
+        projected.push({
             ID: `proj-${rule.ID}-${yearMonth}`, // ID único por mes
             Fecha: dateStr,
             Descripcion: rule.Nombre,
             Categoria: rule.Categoria,
             Cuenta: rule.Cuenta,
-            Monto: rule.Monto,
+            Monto: remaining,
             Tipo: rule.Tipo,
             Estado: 'Proyectado',
             IsVirtual: true,
+            IsPartial: matched.length > 0,
+            MontoOriginal: ruleAmount,
+            MontoPagado: ruleAmount - remaining,
             OriginalRule: rule,
             Installment: getInstallmentInfo(rule, dateStr)
-        };
+        });
     });
+
+    return projected;
 };
 
 /**
