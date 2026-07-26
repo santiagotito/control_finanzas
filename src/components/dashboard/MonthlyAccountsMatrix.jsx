@@ -80,6 +80,16 @@ const MonthlyAccountsMatrix = ({ transactions, recurringRules, accounts, monthsB
             else add(expense, m, t.Cuenta, amt);
         });
 
+        // 1b. Validados del mes actual en tarjetas (ya ocurrieron pero deben verse en el dashboard)
+        (transactions || []).forEach(t => {
+            if (!t || t.Estado !== 'Validado') return;
+            const m = txMonth(t);
+            if (!m || m !== currentMonth || !cardNames.has(t.Cuenta)) return;
+            const amt = parseFloat(t.Monto) || 0;
+            if (t.Tipo === 'Ingreso') add(income, currentMonth, t.Cuenta, amt);
+            else add(expense, currentMonth, t.Cuenta, amt);
+        });
+
         // 2. Proyecciones de reglas recurrentes (comprometido futuro)
         futureMonths.forEach(m => {
             generateProjectedTransactions(recurringRules || [], m, transactions || []).forEach(v => {
