@@ -2,9 +2,9 @@ import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 // Cuentas de ahorro/emergencia: se muestran aparte, no suman a totales
 // y alimentan la meta "Fondo de Emergencia".
-// Criterio: tipo Inversión o nombre con palabra clave.
+// Criterio: tipo Inversión/Ahorro o nombre con palabra clave.
 export const isEmergencyAccount = (acc) =>
-    acc.Tipo === 'Inversión' || /ahorro|emergencia|reserva/i.test(acc.Nombre || '');
+    acc.Tipo === 'Inversión' || acc.Tipo === 'Ahorro' || /ahorro|emergencia|reserva/i.test(acc.Nombre || '');
 
 // Saldo real total de las cuentas de emergencia/ahorro
 export const getEmergencyBalance = (accounts) =>

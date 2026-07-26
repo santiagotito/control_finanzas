@@ -256,6 +256,7 @@ const AccountsPage = () => {
                                 <option>Tarjeta de Crédito</option>
                                 <option>Efectivo</option>
                                 <option>Inversión</option>
+                                <option>Ahorro</option>
                             </select>
                         </div>
 

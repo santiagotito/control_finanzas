@@ -465,7 +465,7 @@ const TransactionForm = ({ onSuccess, onCancel, initialData = null }) => {
             {formData.type === 'Gasto' && (
                 (() => {
                     const acc = accounts.find(a => a.Nombre === formData.account);
-                    const isSavings = acc && (acc.Tipo === 'Inversión' || acc.Nombre.toLowerCase().includes('ahorro'));
+                    const isSavings = acc && (acc.Tipo === 'Inversión' || acc.Tipo === 'Ahorro' || acc.Nombre.toLowerCase().includes('ahorro'));
 
                     if (isSavings) return (
                         <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 flex items-start gap-3 animate-bounce-subtle">
